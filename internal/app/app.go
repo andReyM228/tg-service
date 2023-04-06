@@ -7,8 +7,11 @@ import (
 	"strconv"
 	"strings"
 	car_handler "tg_service/internal/handler/car"
+	user_handler "tg_service/internal/handler/user"
 	"tg_service/internal/repository/cars"
+	"tg_service/internal/repository/user"
 	"tg_service/internal/service/car"
+	user_service "tg_service/internal/service/user"
 
 	"tg_service/internal/config"
 
@@ -20,8 +23,11 @@ type App struct {
 	serviceName string
 	tgbot       *tgbotapi.BotAPI
 	logger      *logrus.Logger
+	usersRepo   user.Repository
 	carsRepo    cars.Repository
+	userService user_service.Service
 	carService  car.Service
+	userHandler user_handler.Handler
 	carHandler  car_handler.Handler
 	clientHTTP  *http.Client
 }
@@ -83,6 +89,22 @@ func (a *App) initTgBot() {
 				log.Fatal(err)
 			}
 
+		case strings.Contains(update.Message.Text, "/get-user"):
+			msg := strings.Split(update.Message.Text, ":")
+
+			id, err := strconv.Atoi(msg[1])
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			userResp, err := a.userHandler.Get(int64(id))
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, userResp)); err != nil {
+				log.Fatal(err)
+			}
 		}
 
 	}
@@ -96,18 +118,21 @@ func (a *App) initLogger() {
 
 func (a *App) initRepos() {
 	a.carsRepo = cars.NewRepository(a.logger, a.clientHTTP)
+	a.usersRepo = user.NewRepository(a.logger, a.clientHTTP)
 
 	a.logger.Debug("repos created")
 }
 
 func (a *App) initServices() {
 	a.carService = car.NewService(a.carsRepo, a.logger)
+	a.userService = user_service.NewService(a.usersRepo, a.logger)
 
 	a.logger.Debug("repos created")
 }
 
 func (a *App) initHandlers() {
 	a.carHandler = car_handler.NewHandler(a.carService)
+	a.userHandler = user_handler.NewHandler(a.userService)
 	a.logger.Debug("handlers created")
 }
 

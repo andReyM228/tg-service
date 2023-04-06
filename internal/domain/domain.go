@@ -9,3 +9,13 @@ type Car struct {
 	Price     int64
 	CreatedAt time.Time
 }
+
+type User struct {
+	ID        int
+	Name      string
+	Surname   string
+	Phone     string
+	Email     string
+	Cars      []Car
+	CreatedAt time.Time
+}
