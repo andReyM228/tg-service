@@ -7,6 +7,7 @@ type Car struct {
 	Name      string
 	Model     string
 	Price     int64
+	Image     string
 	CreatedAt time.Time
 }
 

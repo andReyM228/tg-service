@@ -1,6 +1,7 @@
 package app
 
 import (
+	"encoding/base64"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"net/http"
@@ -41,11 +42,12 @@ func New(name string) App {
 func (a *App) Run() {
 	a.populateConfig()
 	a.initLogger()
+	a.initTgBot()
 	a.initHTTPClient()
 	a.initRepos()
 	a.initServices()
 	a.initHandlers()
-	a.initTgBot()
+	a.listenTgBot()
 }
 
 func (a *App) initTgBot() {
@@ -55,6 +57,9 @@ func (a *App) initTgBot() {
 		log.Fatal(err)
 	}
 
+}
+
+func (a *App) listenTgBot() {
 	updateConfig := tgbotapi.NewUpdate(0)
 	updateConfig.Timeout = 1
 	updates := a.tgbot.GetUpdatesChan(updateConfig)
@@ -68,7 +73,7 @@ func (a *App) initTgBot() {
 
 		switch {
 		case strings.Contains(update.Message.Text, "/start"):
-			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "tg-bot started")); err != nil {
+			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "введите /registration чтобы зарегестрироваться, и /login чтобы войти")); err != nil {
 				log.Fatal(err)
 			}
 
@@ -80,12 +85,23 @@ func (a *App) initTgBot() {
 				log.Fatal(err)
 			}
 
-			carResp, err := a.carHandler.Get(int64(id))
+			carResp, carImage, err := a.carHandler.Get(int64(id))
 			if err != nil {
 				log.Fatal(err)
 			}
 
 			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, carResp)); err != nil {
+				log.Fatal(err)
+			}
+
+			imageBytes, err := base64.StdEncoding.DecodeString(carImage)
+			if err != nil {
+				log.Fatal(err)
+			}
+
+			photo := tgbotapi.FileBytes{Name: "image.jpg", Bytes: imageBytes}
+
+			if _, err := a.tgbot.Send(tgbotapi.NewPhoto(update.Message.Chat.ID, photo)); err != nil {
 				log.Fatal(err)
 			}
 
@@ -105,10 +121,15 @@ func (a *App) initTgBot() {
 			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, userResp)); err != nil {
 				log.Fatal(err)
 			}
+
+		case strings.Contains(update.Message.Text, "/registration"):
+			err := a.userHandler.Create(updates, update.Message.Chat.ID)
+			if err != nil {
+				log.Fatal(err)
+			}
 		}
 
 	}
-
 }
 
 func (a *App) initLogger() {
@@ -132,7 +153,7 @@ func (a *App) initServices() {
 
 func (a *App) initHandlers() {
 	a.carHandler = car_handler.NewHandler(a.carService)
-	a.userHandler = user_handler.NewHandler(a.userService)
+	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot)
 	a.logger.Debug("handlers created")
 }
 

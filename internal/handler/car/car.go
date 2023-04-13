@@ -16,13 +16,13 @@ func NewHandler(service car.Service) Handler {
 	}
 }
 
-func (h Handler) Get(id int64) (string, error) {
+func (h Handler) Get(id int64) (string, string, error) {
 	car, err := h.carService.GetCar(id)
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	return fmt.Sprintf("имя: %s, модель: %s, цена: %d", car.Name, car.Model, car.Price), nil
+	return fmt.Sprintf("имя: %s, модель: %s, цена: %d", car.Name, car.Model, car.Price), car.Image, nil
 }
 
 func (h Handler) Update(ctx *fiber.Ctx) error {
