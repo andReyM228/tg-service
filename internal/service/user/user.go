@@ -18,7 +18,7 @@ func NewService(users user.Repository, log *logrus.Logger) Service {
 	}
 }
 
-func (s Service) GetCar(userID int64) (domain.User, error) {
+func (s Service) GetUser(userID int64) (domain.User, error) {
 	user, err := s.users.Get(userID)
 	if err != nil {
 		s.log.Errorln(err)
@@ -26,4 +26,14 @@ func (s Service) GetCar(userID int64) (domain.User, error) {
 	}
 
 	return user, nil
+}
+
+func (s Service) CreateUser(user domain.User) error {
+	err := s.users.Create(user)
+	if err != nil {
+		s.log.Errorln(err)
+		return err
+	}
+
+	return nil
 }

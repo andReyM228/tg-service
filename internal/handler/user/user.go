@@ -22,7 +22,7 @@ func NewHandler(service user.Service, tgbot *tgbotapi.BotAPI) Handler {
 }
 
 func (h Handler) Get(id int64) (string, error) {
-	user, err := h.userService.GetCar(id)
+	user, err := h.userService.GetUser(id)
 	if err != nil {
 		return "", err
 	}
@@ -120,6 +120,32 @@ func (h Handler) Create(updates tgbotapi.UpdatesChannel, chatID int64) error {
 
 		user.Email = update.Message.Text
 		break
+	}
+
+	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите пароль")); err != nil {
+		log.Fatal(err)
+	}
+
+	for update := range updates {
+		if update.Message == nil {
+			continue
+		}
+
+		if update.Message.Text == "/exit" {
+			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация прервана")); err != nil {
+				log.Fatal(err)
+			}
+
+			return nil
+		}
+
+		user.Password = update.Message.Text
+		user.ChatID = update.Message.Chat.ID
+		break
+	}
+
+	if err := h.userService.CreateUser(user); err != nil {
+		return err
 	}
 
 	return nil

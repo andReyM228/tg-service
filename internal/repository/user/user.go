@@ -1,9 +1,11 @@
 package user
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"github.com/sirupsen/logrus"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"tg_service/internal/domain"
@@ -54,7 +56,25 @@ func (r Repository) Update() error {
 	return nil
 }
 
-func (r Repository) Create() error {
+func (r Repository) Create(user domain.User) error {
+	url := fmt.Sprintf("http://localhost:3000/v1/user-service/user")
+
+	data, err := json.Marshal(user)
+	if err != nil {
+		return err
+	}
+
+	buf := bytes.NewBuffer(data)
+	reader := io.Reader(buf)
+
+	resp, err := r.client.Post(url, "application/json", reader)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode > 300 {
+		return repository.InternalServerError{}
+	}
 
 	return nil
 }

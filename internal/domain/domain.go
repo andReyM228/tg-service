@@ -17,6 +17,8 @@ type User struct {
 	Surname   string
 	Phone     string
 	Email     string
+	Password  string
+	ChatID    int64
 	Cars      []Car
 	CreatedAt time.Time
 }
