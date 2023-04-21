@@ -1,10 +1,12 @@
 package app
 
 import (
+	"context"
 	"encoding/base64"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"log"
 	"net/http"
+	"os"
 	"strconv"
 	"strings"
 	car_handler "tg_service/internal/handler/car"
@@ -31,6 +33,7 @@ type App struct {
 	userHandler user_handler.Handler
 	carHandler  car_handler.Handler
 	clientHTTP  *http.Client
+	errChan     chan error
 }
 
 func New(name string) App {
@@ -39,9 +42,10 @@ func New(name string) App {
 	}
 }
 
-func (a *App) Run() {
+func (a *App) Run(ctx context.Context) {
 	a.populateConfig()
 	a.initLogger()
+	a.listenErrs(ctx)
 	a.initTgBot()
 	a.initHTTPClient()
 	a.initRepos()
@@ -50,11 +54,31 @@ func (a *App) Run() {
 	a.listenTgBot()
 }
 
+func (a *App) listenErrs(ctx context.Context) {
+	a.errChan = make(chan error)
+
+	go func() {
+		for {
+			select {
+			case err := <-a.errChan:
+				go func(err error) {
+					a.logger.Errorln(err)
+				}(err)
+			case <-ctx.Done():
+				a.logger.Debug("ctx is done")
+				os.Exit(1)
+
+			}
+		}
+	}()
+}
+
 func (a *App) initTgBot() {
 	var err error
 	a.tgbot, err = tgbotapi.NewBotAPI(a.config.TgBot.Token)
 	if err != nil {
-		log.Fatal(err)
+		a.errChan <- err
+		return
 	}
 
 }
@@ -74,7 +98,8 @@ func (a *App) listenTgBot() {
 		switch {
 		case strings.Contains(update.Message.Text, "/start"):
 			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "введите /registration чтобы зарегестрироваться, и /login чтобы войти")); err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 
 		case strings.Contains(update.Message.Text, "/get-car"):
@@ -82,27 +107,32 @@ func (a *App) listenTgBot() {
 
 			id, err := strconv.Atoi(msg[1])
 			if err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 
 			carResp, carImage, err := a.carHandler.Get(int64(id))
 			if err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 
 			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, carResp)); err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 
 			imageBytes, err := base64.StdEncoding.DecodeString(carImage)
 			if err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 
 			photo := tgbotapi.FileBytes{Name: "image.jpg", Bytes: imageBytes}
 
 			if _, err := a.tgbot.Send(tgbotapi.NewPhoto(update.Message.Chat.ID, photo)); err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 
 		case strings.Contains(update.Message.Text, "/get-user"):
@@ -110,22 +140,26 @@ func (a *App) listenTgBot() {
 
 			id, err := strconv.Atoi(msg[1])
 			if err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 
 			userResp, err := a.userHandler.Get(int64(id))
 			if err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 
 			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, userResp)); err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 
 		case strings.Contains(update.Message.Text, "/registration"):
 			err := a.userHandler.Create(updates, update.Message.Chat.ID)
 			if err != nil {
-				log.Fatal(err)
+				a.errChan <- err
+				continue
 			}
 		}
 
