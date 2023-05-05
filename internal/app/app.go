@@ -9,6 +9,7 @@ import (
 	"os"
 	"strconv"
 	"strings"
+	"tg_service/internal/domain/errs"
 	car_handler "tg_service/internal/handler/car"
 	user_handler "tg_service/internal/handler/user"
 	"tg_service/internal/repository/cars"
@@ -33,7 +34,7 @@ type App struct {
 	userHandler user_handler.Handler
 	carHandler  car_handler.Handler
 	clientHTTP  *http.Client
-	errChan     chan error
+	errChan     chan errs.TgError
 }
 
 func New(name string) App {
@@ -55,14 +56,14 @@ func (a *App) Run(ctx context.Context) {
 }
 
 func (a *App) listenErrs(ctx context.Context) {
-	a.errChan = make(chan error)
+	a.errChan = make(chan errs.TgError)
 
 	go func() {
 		for {
 			select {
 			case err := <-a.errChan:
-				go func(err error) {
-					a.logger.Errorln(err)
+				go func(err errs.TgError) {
+					errs.HandleError(err.Err, a.logger, a.tgbot, err.ChatID)
 				}(err)
 			case <-ctx.Done():
 				a.logger.Debug("ctx is done")
@@ -77,7 +78,9 @@ func (a *App) initTgBot() {
 	var err error
 	a.tgbot, err = tgbotapi.NewBotAPI(a.config.TgBot.Token)
 	if err != nil {
-		a.errChan <- err
+		a.errChan <- errs.TgError{
+			Err: err,
+		}
 		return
 	}
 
@@ -98,7 +101,10 @@ func (a *App) listenTgBot() {
 		switch {
 		case strings.Contains(update.Message.Text, "/start"):
 			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "введите /registration чтобы зарегестрироваться, и /login чтобы войти")); err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 
@@ -107,31 +113,46 @@ func (a *App) listenTgBot() {
 
 			id, err := strconv.Atoi(msg[1])
 			if err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 
 			carResp, carImage, err := a.carHandler.Get(int64(id))
 			if err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 
 			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, carResp)); err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 
 			imageBytes, err := base64.StdEncoding.DecodeString(carImage)
 			if err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 
 			photo := tgbotapi.FileBytes{Name: "image.jpg", Bytes: imageBytes}
 
 			if _, err := a.tgbot.Send(tgbotapi.NewPhoto(update.Message.Chat.ID, photo)); err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 
@@ -140,25 +161,37 @@ func (a *App) listenTgBot() {
 
 			id, err := strconv.Atoi(msg[1])
 			if err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 
 			userResp, err := a.userHandler.Get(int64(id))
 			if err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 
 			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, userResp)); err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 
 		case strings.Contains(update.Message.Text, "/registration"):
 			err := a.userHandler.Create(updates, update.Message.Chat.ID)
 			if err != nil {
-				a.errChan <- err
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
 				continue
 			}
 		}

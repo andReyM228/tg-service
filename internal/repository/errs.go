@@ -2,18 +2,18 @@ package repository
 
 type (
 	NotFound struct {
-		NotFound string
+		What string
 	}
 
 	InternalServerError struct {
-		InternalServerError string
+		Cause string
 	}
 )
 
 func (n NotFound) Error() string {
-	return "Not found: " + n.NotFound
+	return n.What
 }
 
 func (n InternalServerError) Error() string {
-	return "Internal server error: " + n.InternalServerError
+	return n.Cause
 }

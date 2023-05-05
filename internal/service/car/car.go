@@ -1,8 +1,11 @@
 package car
 
 import (
+	"errors"
 	"github.com/sirupsen/logrus"
 	"tg_service/internal/domain"
+	"tg_service/internal/domain/errs"
+	"tg_service/internal/repository"
 	"tg_service/internal/repository/cars"
 )
 
@@ -21,8 +24,12 @@ func NewService(cars cars.Repository, log *logrus.Logger) Service {
 func (s Service) GetCar(carID int64) (domain.Car, error) {
 	car, err := s.cars.Get(carID)
 	if err != nil {
-		s.log.Errorln(err)
-		return domain.Car{}, err
+		if errors.As(err, &repository.InternalServerError{}) {
+			s.log.Errorln(err)
+			return domain.Car{}, errs.InternalError{}
+		}
+		s.log.Debug(err)
+		return domain.Car{}, errs.NotFoundError{What: err.Error()}
 	}
 
 	return car, nil

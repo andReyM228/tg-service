@@ -27,21 +27,25 @@ func (r Repository) Get(id int64) (domain.Car, error) {
 
 	resp, err := r.client.Get(url)
 	if err != nil {
-		return domain.Car{}, err
+		return domain.Car{}, repository.InternalServerError{Cause: err.Error()}
 	}
 
-	if resp.StatusCode > 300 {
-		return domain.Car{}, repository.InternalServerError{}
+	switch resp.StatusCode {
+	case 404:
+		return domain.Car{}, repository.NotFound{What: "car by id"}
+
+	case 500:
+		return domain.Car{}, repository.InternalServerError{Cause: ""}
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return domain.Car{}, err
+		return domain.Car{}, repository.InternalServerError{Cause: err.Error()}
 	}
 
 	var car domain.Car
 	if err := json.Unmarshal(data, &car); err != nil {
-		return domain.Car{}, err
+		return domain.Car{}, repository.InternalServerError{Cause: err.Error()}
 	}
 
 	r.log.Infoln(car)
