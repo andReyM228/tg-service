@@ -85,6 +85,45 @@ func (r Repository) Create(user domain.User) error {
 	return nil
 }
 
+func (r Repository) Login(password string, chatID int64) error {
+	url := fmt.Sprintf("http://localhost:3000/v1/user-service/user/login")
+	request := loginRequest{
+		ChatID:   chatID,
+		Password: password,
+	}
+
+	data, err := json.Marshal(request)
+	if err != nil {
+		return err
+	}
+
+	buf := bytes.NewBuffer(data)
+	reader := io.Reader(buf)
+
+	resp, err := r.client.Post(url, "application/json", reader)
+	if err != nil {
+		r.log.Debug(err)
+		return err
+	}
+
+	r.log.Debug(resp.Status)
+
+	if resp.StatusCode > 399 {
+		switch resp.StatusCode {
+		case 400:
+			return repository.BadRequest{Cause: "wrong body"}
+		case 401:
+			return repository.Unauthorized{Cause: "wrong password"}
+		case 404:
+			return repository.NotFound{What: "user"}
+		default:
+			return repository.InternalServerError{Cause: ""}
+		}
+	}
+
+	return nil
+}
+
 func (r Repository) Delete(id int64) error {
 
 	return nil

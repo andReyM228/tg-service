@@ -43,6 +43,14 @@ func (e ForbiddenError) Error() string {
 	return fmt.Sprintf("forbidden: %s", e.Cause)
 }
 
+type UnauthorizedError struct {
+	Cause string
+}
+
+func (e UnauthorizedError) Error() string {
+	return fmt.Sprintf("forbidden: %s", e.Cause)
+}
+
 func HandleError(err error, log *logrus.Logger, tgbot *tgbotapi.BotAPI, chatID int64) {
 	switch err.(type) {
 	case *NotFoundError:
@@ -63,6 +71,13 @@ func HandleError(err error, log *logrus.Logger, tgbot *tgbotapi.BotAPI, chatID i
 		log.Debug(err)
 
 		_, err := tgbot.Send(tgbotapi.NewMessage(chatID, "вам это запрещено"))
+		if err != nil {
+			log.Error(err)
+		}
+	case *UnauthorizedError:
+		log.Debug(err)
+
+		_, err := tgbot.Send(tgbotapi.NewMessage(chatID, "неуспешная авторизация"))
 		if err != nil {
 			log.Error(err)
 		}

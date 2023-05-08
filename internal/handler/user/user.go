@@ -151,6 +151,35 @@ func (h Handler) Create(updates tgbotapi.UpdatesChannel, chatID int64) error {
 	return nil
 }
 
+func (h Handler) Login(updates tgbotapi.UpdatesChannel, chatID int64) error {
+	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите пароль")); err != nil {
+		log.Fatal(err)
+	}
+
+	for update := range updates {
+		if update.Message == nil {
+			continue
+		}
+
+		if update.Message.Text == "/exit" {
+			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "процес логина прервана")); err != nil {
+				log.Fatal(err)
+			}
+
+			return nil
+		}
+
+		err := h.userService.Login(update.Message.Text, chatID)
+		if err != nil {
+			return err
+		}
+
+		break
+	}
+
+	return nil
+}
+
 func (h Handler) Delete(ctx *fiber.Ctx) error {
 
 	return nil

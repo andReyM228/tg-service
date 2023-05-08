@@ -194,6 +194,15 @@ func (a *App) listenTgBot() {
 				}
 				continue
 			}
+		case strings.Contains(update.Message.Text, "/login"):
+			err := a.userHandler.Login(updates, update.Message.Chat.ID)
+			if err != nil {
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
+				continue
+			}
 		}
 
 	}
