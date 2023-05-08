@@ -59,8 +59,6 @@ func (h Handler) Create(updates tgbotapi.UpdatesChannel, chatID int64) error {
 		break
 	}
 
-	//конец блока
-
 	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите фамилию")); err != nil {
 		log.Fatal(err)
 	}

@@ -29,21 +29,25 @@ func (r Repository) Get(id int64) (domain.User, error) {
 
 	resp, err := r.client.Get(url)
 	if err != nil {
-		return domain.User{}, err
+		return domain.User{}, repository.InternalServerError{Cause: err.Error()}
 	}
 
-	if resp.StatusCode > 300 {
-		return domain.User{}, repository.InternalServerError{}
+	switch resp.StatusCode {
+	case 404:
+		return domain.User{}, repository.NotFound{What: "user by id"}
+
+	case 500:
+		return domain.User{}, repository.InternalServerError{Cause: ""}
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return domain.User{}, err
+		return domain.User{}, repository.InternalServerError{Cause: err.Error()}
 	}
 
 	var user domain.User
 	if err := json.Unmarshal(data, &user); err != nil {
-		return domain.User{}, err
+		return domain.User{}, repository.InternalServerError{Cause: err.Error()}
 	}
 
 	r.log.Infoln(user)
@@ -56,6 +60,7 @@ func (r Repository) Update() error {
 	return nil
 }
 
+// сделать норм репоситорские ошибки
 func (r Repository) Create(user domain.User) error {
 	url := fmt.Sprintf("http://localhost:3000/v1/user-service/user")
 
@@ -72,8 +77,9 @@ func (r Repository) Create(user domain.User) error {
 		return err
 	}
 
-	if resp.StatusCode > 300 {
-		return repository.InternalServerError{}
+	switch resp.StatusCode {
+	case 500:
+		return repository.InternalServerError{Cause: ""}
 	}
 
 	return nil

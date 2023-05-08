@@ -1,8 +1,11 @@
 package user
 
 import (
+	"errors"
 	"github.com/sirupsen/logrus"
 	"tg_service/internal/domain"
+	"tg_service/internal/domain/errs"
+	"tg_service/internal/repository"
 	"tg_service/internal/repository/user"
 )
 
@@ -21,8 +24,13 @@ func NewService(users user.Repository, log *logrus.Logger) Service {
 func (s Service) GetUser(userID int64) (domain.User, error) {
 	user, err := s.users.Get(userID)
 	if err != nil {
-		s.log.Errorln(err)
-		return domain.User{}, err
+		if errors.As(err, &repository.InternalServerError{}) {
+			s.log.Errorln(err)
+			return domain.User{}, errs.InternalError{}
+		}
+		s.log.Debug(err)
+
+		return domain.User{}, errs.NotFoundError{What: err.Error()}
 	}
 
 	return user, nil
@@ -31,8 +39,13 @@ func (s Service) GetUser(userID int64) (domain.User, error) {
 func (s Service) CreateUser(user domain.User) error {
 	err := s.users.Create(user)
 	if err != nil {
-		s.log.Errorln(err)
-		return err
+		if errors.As(err, &repository.InternalServerError{}) {
+			s.log.Errorln(err)
+			return errs.InternalError{}
+		}
+		s.log.Debug(err)
+
+		return errs.NotFoundError{What: err.Error()}
 	}
 
 	return nil
