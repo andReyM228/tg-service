@@ -35,6 +35,7 @@ type App struct {
 	carHandler  car_handler.Handler
 	clientHTTP  *http.Client
 	errChan     chan errs.TgError
+	loginUsers  map[int64]string
 }
 
 func New(name string) App {
@@ -201,8 +202,11 @@ func (a *App) listenTgBot() {
 					Err:    err,
 					ChatID: update.Message.Chat.ID,
 				}
+
 				continue
 			}
+
+			a.logger.Debug("map: ", a.loginUsers)
 		}
 
 	}
@@ -224,12 +228,13 @@ func (a *App) initServices() {
 	a.carService = car.NewService(a.carsRepo, a.logger)
 	a.userService = user_service.NewService(a.usersRepo, a.logger)
 
-	a.logger.Debug("repos created")
+	a.logger.Debug("services created")
 }
 
 func (a *App) initHandlers() {
+	a.loginUsers = map[int64]string{}
 	a.carHandler = car_handler.NewHandler(a.carService)
-	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot)
+	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.loginUsers)
 	a.logger.Debug("handlers created")
 }
 

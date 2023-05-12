@@ -2,22 +2,26 @@ package user
 
 import (
 	"fmt"
+	"github.com/andReyM228/lib/auth"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/gofiber/fiber/v2"
 	"log"
 	"tg_service/internal/domain"
+	"tg_service/internal/domain/errs"
 	"tg_service/internal/service/user"
 )
 
 type Handler struct {
 	userService user.Service
 	tgbot       *tgbotapi.BotAPI
+	loginMap    map[int64]string
 }
 
-func NewHandler(service user.Service, tgbot *tgbotapi.BotAPI) Handler {
+func NewHandler(service user.Service, tgbot *tgbotapi.BotAPI, loginMap map[int64]string) Handler {
 	return Handler{
 		userService: service,
 		tgbot:       tgbot,
+		loginMap:    loginMap,
 	}
 }
 
@@ -153,7 +157,7 @@ func (h Handler) Create(updates tgbotapi.UpdatesChannel, chatID int64) error {
 
 func (h Handler) Login(updates tgbotapi.UpdatesChannel, chatID int64) error {
 	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите пароль")); err != nil {
-		log.Fatal(err)
+		return errs.InternalError{}
 	}
 
 	for update := range updates {
@@ -162,19 +166,30 @@ func (h Handler) Login(updates tgbotapi.UpdatesChannel, chatID int64) error {
 		}
 
 		if update.Message.Text == "/exit" {
-			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "процес логина прервана")); err != nil {
-				log.Fatal(err)
+			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "процес логина прерван")); err != nil {
+				return errs.InternalError{}
 			}
 
 			return nil
 		}
 
-		err := h.userService.Login(update.Message.Text, chatID)
+		userID, err := h.userService.Login(update.Message.Text, chatID)
 		if err != nil {
 			return err
 		}
 
+		token, err := auth.CreateToken(chatID, userID)
+		if err != nil {
+			return errs.InternalError{}
+		}
+
+		h.loginMap[chatID] = token
+
 		break
+	}
+
+	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "логин успешный!")); err != nil {
+		return errs.InternalError{}
 	}
 
 	return nil
@@ -184,3 +199,10 @@ func (h Handler) Delete(ctx *fiber.Ctx) error {
 
 	return nil
 }
+
+/*
+1. при логине генерировать токен
+2. токен должен содержать: уникальная инфа про юзера и время истечения
+3. написать функцию которая будет докодировать токен
+4. добавить авторизацию во все остальные сервисы
+*/

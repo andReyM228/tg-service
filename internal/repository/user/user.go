@@ -85,7 +85,7 @@ func (r Repository) Create(user domain.User) error {
 	return nil
 }
 
-func (r Repository) Login(password string, chatID int64) error {
+func (r Repository) Login(password string, chatID int64) (int64, error) {
 	url := fmt.Sprintf("http://localhost:3000/v1/user-service/user/login")
 	request := loginRequest{
 		ChatID:   chatID,
@@ -94,7 +94,7 @@ func (r Repository) Login(password string, chatID int64) error {
 
 	data, err := json.Marshal(request)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	buf := bytes.NewBuffer(data)
@@ -103,7 +103,7 @@ func (r Repository) Login(password string, chatID int64) error {
 	resp, err := r.client.Post(url, "application/json", reader)
 	if err != nil {
 		r.log.Debug(err)
-		return err
+		return 0, err
 	}
 
 	r.log.Debug(resp.Status)
@@ -111,17 +111,28 @@ func (r Repository) Login(password string, chatID int64) error {
 	if resp.StatusCode > 399 {
 		switch resp.StatusCode {
 		case 400:
-			return repository.BadRequest{Cause: "wrong body"}
+			return 0, repository.BadRequest{Cause: "wrong body"}
 		case 401:
-			return repository.Unauthorized{Cause: "wrong password"}
+			return 0, repository.Unauthorized{Cause: "wrong password"}
 		case 404:
-			return repository.NotFound{What: "user"}
+			return 0, repository.NotFound{What: "user"}
 		default:
-			return repository.InternalServerError{Cause: ""}
+			return 0, repository.InternalServerError{Cause: ""}
 		}
 	}
 
-	return nil
+	data, err = ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return 0, repository.InternalServerError{Cause: err.Error()}
+	}
+
+	var loginResp loginResponse
+
+	if err := json.Unmarshal(data, &loginResp); err != nil {
+		return 0, repository.InternalServerError{Cause: err.Error()}
+	}
+
+	return loginResp.UserID, nil
 }
 
 func (r Repository) Delete(id int64) error {

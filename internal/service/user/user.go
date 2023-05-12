@@ -51,19 +51,19 @@ func (s Service) CreateUser(user domain.User) error {
 	return nil
 }
 
-func (s Service) Login(password string, chatID int64) error {
-	err := s.users.Login(password, chatID)
+func (s Service) Login(password string, chatID int64) (int64, error) {
+	userID, err := s.users.Login(password, chatID)
 	if err != nil {
 		switch err.(type) {
 		case repository.BadRequest:
-			return errs.BadRequestError{Cause: "wrong body"}
+			return 0, errs.BadRequestError{Cause: "wrong body"}
 		case repository.Unauthorized:
-			return errs.UnauthorizedError{Cause: "wrong password"}
+			return 0, errs.UnauthorizedError{Cause: "wrong password"}
 		case repository.NotFound:
-			return errs.NotFoundError{What: "user"}
+			return 0, errs.NotFoundError{What: "user"}
 		default:
-			return errs.InternalError{Cause: ""}
+			return 0, errs.InternalError{Cause: ""}
 		}
 	}
-	return nil
+	return userID, nil
 }
