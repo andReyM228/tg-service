@@ -1,5 +1,7 @@
 github.com/andReyM228/lib/auth v1.0.0 h1:ahWHLdRzyBRlhrfoctWSf0G1uvcFF97rAyK1M2V3+Ns=
 github.com/andReyM228/lib/auth v1.0.0/go.mod h1:PRpTOg6L+gbuM3ZxAwe/CZlC5i5I+8SY/qyyIdPbnw0=
+github.com/andReyM228/lib/errs v1.0.0 h1:4g7lwvbvOlnnjXUu653/rb0mNPToLMyTycaMaj34eNA=
+github.com/andReyM228/lib/errs v1.0.0/go.mod h1:Blpyt7ldn3WPmsjygBuKe2CWNfYSp6++n3T8J5rLib8=
 github.com/andybalholm/brotli v1.0.4 h1:V7DdXeJtZscaqfNuAdSRuRFzuiKlHSC/Zh3zl9qY3JY=
 github.com/andybalholm/brotli v1.0.4/go.mod h1:fO7iG3H7G2nSZ7m0zPUDn85XEX2GTukHGRSepvi9Eig=
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
@@ -46,6 +48,8 @@ github.com/savsgio/gotils v0.0.0-20230203094617-bcbc01813b4f h1:LKLq2MuL/uCGWS7B
 github.com/savsgio/gotils v0.0.0-20230203094617-bcbc01813b4f/go.mod h1:qwtSXrKuJh/zsFQ12yEE89xfCrGKK63Rr7ctU/uCo4g=
 github.com/sirupsen/logrus v1.9.0 h1:trlNQbNUG3OdDrDil03MCb1H2o9nJ1x4/5LYw7byDE0=
 github.com/sirupsen/logrus v1.9.0/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
+github.com/sirupsen/logrus v1.9.2 h1:oxx1eChJGI6Uks2ZC4W1zpLlVgqB8ner4EuQwV4Ik1Y=
+github.com/sirupsen/logrus v1.9.2/go.mod h1:naHLuLoDiP4jHNo9R0sCBMtWGeIprob74mVsIT4qYEQ=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.7.0 h1:nwc3DEeHmmLAfoZucVR881uASk0Mfjw8xYJ99tb5CcY=
 github.com/stretchr/testify v1.7.0/go.mod h1:6Fq8oRcR53rry900zMqJjRRixrwX3KX962/h/Wwjteg=

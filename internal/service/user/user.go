@@ -2,9 +2,9 @@ package user
 
 import (
 	"errors"
+	"github.com/andReyM228/lib/errs"
 	"github.com/sirupsen/logrus"
 	"tg_service/internal/domain"
-	"tg_service/internal/domain/errs"
 	"tg_service/internal/repository"
 	"tg_service/internal/repository/user"
 )

@@ -1,13 +1,15 @@
 package user
 
 import (
-	"fmt"
 	"github.com/andReyM228/lib/auth"
+	"github.com/andReyM228/lib/errs"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/gofiber/fiber/v2"
+
+	"fmt"
 	"log"
+
 	"tg_service/internal/domain"
-	"tg_service/internal/domain/errs"
 	"tg_service/internal/service/user"
 )
 
