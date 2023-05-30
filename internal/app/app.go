@@ -121,7 +121,7 @@ func (a *App) listenTgBot() {
 				continue
 			}
 
-			carResp, carImage, err := a.carHandler.Get(int64(id))
+			carResp, carImage, err := a.carHandler.Get(int64(id), a.loginUsers[update.Message.Chat.ID])
 			if err != nil {
 				a.errChan <- errs.TgError{
 					Err:    err,

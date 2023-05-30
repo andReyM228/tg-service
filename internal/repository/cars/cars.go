@@ -22,20 +22,32 @@ func NewRepository(log *logrus.Logger, client *http.Client) Repository {
 	}
 }
 
-func (r Repository) Get(id int64) (domain.Car, error) {
+func (r Repository) Get(id int64, token string) (domain.Car, error) {
 	url := fmt.Sprintf("http://localhost:3000/v1/user-service/car/%d", id)
 
-	resp, err := r.client.Get(url)
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return domain.Car{}, repository.InternalServerError{Cause: err.Error()}
 	}
 
-	switch resp.StatusCode {
-	case 404:
-		return domain.Car{}, repository.NotFound{What: "car by id"}
+	req.Header.Add("Authorization", token)
 
-	case 500:
-		return domain.Car{}, repository.InternalServerError{Cause: ""}
+	resp, err := r.client.Do(req)
+	if err != nil {
+		return domain.Car{}, repository.InternalServerError{Cause: err.Error()}
+	}
+
+	if resp.StatusCode > 399 {
+		switch resp.StatusCode {
+		case 404:
+			return domain.Car{}, repository.NotFound{What: "car by id"}
+
+		case 401:
+			return domain.Car{}, repository.Unauthorized{Cause: ""}
+
+		default:
+			return domain.Car{}, repository.InternalServerError{Cause: ""}
+		}
 	}
 
 	data, err := ioutil.ReadAll(resp.Body)

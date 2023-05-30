@@ -16,8 +16,8 @@ func NewHandler(service car.Service) Handler {
 	}
 }
 
-func (h Handler) Get(id int64) (string, string, error) {
-	car, err := h.carService.GetCar(id)
+func (h Handler) Get(id int64, token string) (string, string, error) {
+	car, err := h.carService.GetCar(id, token)
 	if err != nil {
 		return "", "", err
 	}

@@ -4,7 +4,7 @@ go 1.19
 
 require (
 	github.com/andReyM228/lib/auth v1.0.0
-	github.com/andReyM228/lib/errs v1.0.0
+	github.com/andReyM228/lib/errs v1.0.4
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gofiber/fiber/v2 v2.42.0
 	github.com/lib/pq v1.2.0

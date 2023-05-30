@@ -1,7 +1,6 @@
 package car
 
 import (
-	"errors"
 	"github.com/andReyM228/lib/errs"
 	"github.com/sirupsen/logrus"
 	"tg_service/internal/domain"
@@ -21,15 +20,20 @@ func NewService(cars cars.Repository, log *logrus.Logger) Service {
 	}
 }
 
-func (s Service) GetCar(carID int64) (domain.Car, error) {
-	car, err := s.cars.Get(carID)
+func (s Service) GetCar(carID int64, token string) (domain.Car, error) {
+	car, err := s.cars.Get(carID, token)
 	if err != nil {
-		if errors.As(err, &repository.InternalServerError{}) {
-			s.log.Errorln(err)
-			return domain.Car{}, errs.InternalError{}
+		switch err.(type) {
+		case repository.BadRequest:
+			return domain.Car{}, errs.BadRequestError{Cause: err.Error()}
+		case repository.Unauthorized:
+			return domain.Car{}, errs.UnauthorizedError{Cause: err.Error()}
+		case repository.NotFound:
+			return domain.Car{}, errs.NotFoundError{What: err.Error()}
+		default:
+			s.log.Error(err)
+			return domain.Car{}, errs.InternalError{Cause: ""}
 		}
-		s.log.Debug(err)
-		return domain.Car{}, errs.NotFoundError{What: err.Error()}
 	}
 
 	return car, nil
