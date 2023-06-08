@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"encoding/base64"
+	"fmt"
 	"github.com/andReyM228/lib/errs"
 	"github.com/andReyM228/lib/log"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -96,6 +97,46 @@ func (a *App) listenTgBot() {
 
 	for update := range updates {
 		if update.Message == nil {
+			if update.CallbackQuery != nil {
+				switch {
+				case strings.Contains(update.CallbackQuery.Data, "buy_data"):
+					data := strings.Split(update.CallbackQuery.Data, ":")
+					if len(data) < 2 {
+						a.errChan <- errs.TgError{
+							Err:    errs.BadRequestError{},
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+						continue
+					}
+
+					carID, err := strconv.Atoi(data[1])
+					if err != nil {
+						a.errChan <- errs.TgError{
+							Err:    err,
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+						continue
+					}
+
+					err = a.carHandler.BuyCar(update.CallbackQuery.Message.Chat.ID, int64(carID))
+					if err != nil {
+						a.errChan <- errs.TgError{
+							Err:    err,
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+						continue
+					}
+
+					if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "congratulations!, you bought a car")); err != nil {
+						a.errChan <- errs.TgError{
+							Err:    err,
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+						continue
+					}
+				}
+			}
+
 			continue
 		}
 
@@ -130,7 +171,18 @@ func (a *App) listenTgBot() {
 				continue
 			}
 
-			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, carResp)); err != nil {
+			buyButton := tgbotapi.NewInlineKeyboardButtonData("buy", fmt.Sprintf("buy_data:%s", strconv.Itoa(id)))
+			viewButton := tgbotapi.NewInlineKeyboardButtonData("view", "view_data")
+
+			row := tgbotapi.NewInlineKeyboardRow(buyButton, viewButton)
+
+			inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(row)
+
+			message := tgbotapi.NewMessage(update.Message.Chat.ID, carResp)
+
+			message.ReplyMarkup = inlineKeyboard
+
+			if _, err := a.tgbot.Send(message); err != nil {
 				a.errChan <- errs.TgError{
 					Err:    err,
 					ChatID: update.Message.Chat.ID,
@@ -207,8 +259,8 @@ func (a *App) listenTgBot() {
 			}
 
 			a.logger.Debugf("map: %v", a.loginUsers)
-		}
 
+		}
 	}
 }
 
@@ -232,7 +284,7 @@ func (a *App) initServices() {
 
 func (a *App) initHandlers() {
 	a.loginUsers = map[int64]string{}
-	a.carHandler = car_handler.NewHandler(a.carService)
+	a.carHandler = car_handler.NewHandler(a.carService, a.tgbot)
 	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.loginUsers)
 	a.logger.Debug("handlers created")
 }

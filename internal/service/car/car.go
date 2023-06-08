@@ -38,3 +38,22 @@ func (s Service) GetCar(carID int64, token string) (domain.Car, error) {
 
 	return car, nil
 }
+
+func (s Service) BuyCar(chatID, carID int64) error {
+	err := s.cars.BuyCar(chatID, carID)
+	if err != nil {
+		switch err.(type) {
+		case repository.BadRequest:
+			return errs.BadRequestError{Cause: err.Error()}
+		case repository.Unauthorized:
+			return errs.UnauthorizedError{Cause: err.Error()}
+		case repository.NotFound:
+			return errs.NotFoundError{What: err.Error()}
+		default:
+			s.log.Error(err.Error())
+			return errs.InternalError{Cause: ""}
+		}
+	}
+
+	return nil
+}
