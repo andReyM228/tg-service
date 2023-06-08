@@ -2,7 +2,7 @@ package car
 
 import (
 	"github.com/andReyM228/lib/errs"
-	"github.com/sirupsen/logrus"
+	"github.com/andReyM228/lib/log"
 	"tg_service/internal/domain"
 	"tg_service/internal/repository"
 	"tg_service/internal/repository/cars"
@@ -10,10 +10,10 @@ import (
 
 type Service struct {
 	cars cars.Repository
-	log  *logrus.Logger
+	log  log.Logger
 }
 
-func NewService(cars cars.Repository, log *logrus.Logger) Service {
+func NewService(cars cars.Repository, log log.Logger) Service {
 	return Service{
 		cars: cars,
 		log:  log,
@@ -31,7 +31,7 @@ func (s Service) GetCar(carID int64, token string) (domain.Car, error) {
 		case repository.NotFound:
 			return domain.Car{}, errs.NotFoundError{What: err.Error()}
 		default:
-			s.log.Error(err)
+			s.log.Error(err.Error())
 			return domain.Car{}, errs.InternalError{Cause: ""}
 		}
 	}

@@ -3,7 +3,7 @@ package user
 import (
 	"errors"
 	"github.com/andReyM228/lib/errs"
-	"github.com/sirupsen/logrus"
+	"github.com/andReyM228/lib/log"
 	"tg_service/internal/domain"
 	"tg_service/internal/repository"
 	"tg_service/internal/repository/user"
@@ -11,10 +11,10 @@ import (
 
 type Service struct {
 	users user.Repository
-	log   *logrus.Logger
+	log   log.Logger
 }
 
-func NewService(users user.Repository, log *logrus.Logger) Service {
+func NewService(users user.Repository, log log.Logger) Service {
 	return Service{
 		users: users,
 		log:   log,
@@ -25,10 +25,10 @@ func (s Service) GetUser(userID int64) (domain.User, error) {
 	user, err := s.users.Get(userID)
 	if err != nil {
 		if errors.As(err, &repository.InternalServerError{}) {
-			s.log.Errorln(err)
+			s.log.Error(err.Error())
 			return domain.User{}, errs.InternalError{}
 		}
-		s.log.Debug(err)
+		s.log.Debug(err.Error())
 
 		return domain.User{}, errs.NotFoundError{What: err.Error()}
 	}
@@ -40,10 +40,10 @@ func (s Service) CreateUser(user domain.User) error {
 	err := s.users.Create(user)
 	if err != nil {
 		if errors.As(err, &repository.InternalServerError{}) {
-			s.log.Errorln(err)
+			s.log.Error(err.Error())
 			return errs.InternalError{}
 		}
-		s.log.Debug(err)
+		s.log.Debug(err.Error())
 
 		return errs.NotFoundError{What: err.Error()}
 	}

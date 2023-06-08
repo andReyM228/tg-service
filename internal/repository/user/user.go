@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"github.com/andReyM228/lib/log"
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -13,11 +13,11 @@ import (
 )
 
 type Repository struct {
-	log    *logrus.Logger
+	log    log.Logger
 	client *http.Client
 }
 
-func NewRepository(log *logrus.Logger, client *http.Client) Repository {
+func NewRepository(log log.Logger, client *http.Client) Repository {
 	return Repository{
 		log:    log,
 		client: client,
@@ -49,8 +49,6 @@ func (r Repository) Get(id int64) (domain.User, error) {
 	if err := json.Unmarshal(data, &user); err != nil {
 		return domain.User{}, repository.InternalServerError{Cause: err.Error()}
 	}
-
-	r.log.Infoln(user)
 
 	return user, nil
 }
@@ -102,7 +100,7 @@ func (r Repository) Login(password string, chatID int64) (int64, error) {
 
 	resp, err := r.client.Post(url, "application/json", reader)
 	if err != nil {
-		r.log.Debug(err)
+		r.log.Debug(err.Error())
 		return 0, err
 	}
 

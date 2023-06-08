@@ -3,7 +3,7 @@ package cars
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/sirupsen/logrus"
+	"github.com/andReyM228/lib/log"
 	"io/ioutil"
 	"net/http"
 	"tg_service/internal/domain"
@@ -11,11 +11,11 @@ import (
 )
 
 type Repository struct {
-	log    *logrus.Logger
+	log    log.Logger
 	client *http.Client
 }
 
-func NewRepository(log *logrus.Logger, client *http.Client) Repository {
+func NewRepository(log log.Logger, client *http.Client) Repository {
 	return Repository{
 		log:    log,
 		client: client,
@@ -60,7 +60,7 @@ func (r Repository) Get(id int64, token string) (domain.Car, error) {
 		return domain.Car{}, repository.InternalServerError{Cause: err.Error()}
 	}
 
-	r.log.Infoln(car)
+	r.log.Infof("%v", car)
 
 	return car, nil
 }

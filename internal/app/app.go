@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/base64"
 	"github.com/andReyM228/lib/errs"
+	"github.com/andReyM228/lib/log"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"log"
 	"net/http"
 	"os"
 	"strconv"
@@ -19,14 +19,14 @@ import (
 
 	"tg_service/internal/config"
 
-	"github.com/sirupsen/logrus"
+	stdLog "log"
 )
 
 type App struct {
 	config      config.Config
 	serviceName string
 	tgbot       *tgbotapi.BotAPI
-	logger      *logrus.Logger
+	logger      log.Logger
 	usersRepo   user.Repository
 	carsRepo    cars.Repository
 	userService user_service.Service
@@ -206,15 +206,14 @@ func (a *App) listenTgBot() {
 				continue
 			}
 
-			a.logger.Debug("map: ", a.loginUsers)
+			a.logger.Debugf("map: %v", a.loginUsers)
 		}
 
 	}
 }
 
 func (a *App) initLogger() {
-	a.logger = logrus.New()
-	a.logger.SetLevel(logrus.DebugLevel)
+	a.logger = log.Init()
 }
 
 func (a *App) initRepos() {
@@ -241,7 +240,7 @@ func (a *App) initHandlers() {
 func (a *App) populateConfig() {
 	cfg, err := config.ParseConfig()
 	if err != nil {
-		log.Fatal()
+		stdLog.Fatal()
 	}
 
 	a.config = cfg
