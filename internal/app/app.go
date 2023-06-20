@@ -4,13 +4,13 @@ import (
 	"context"
 	"encoding/base64"
 	"fmt"
-	"github.com/andReyM228/lib/errs"
-	"github.com/andReyM228/lib/log"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+	stdLog "log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+
+	"tg_service/internal/config"
 	car_handler "tg_service/internal/handler/car"
 	user_handler "tg_service/internal/handler/user"
 	"tg_service/internal/repository/cars"
@@ -18,9 +18,10 @@ import (
 	"tg_service/internal/service/car"
 	user_service "tg_service/internal/service/user"
 
-	"tg_service/internal/config"
-
-	stdLog "log"
+	"github.com/andReyM228/lib/errs"
+	"github.com/andReyM228/lib/gpt3"
+	"github.com/andReyM228/lib/log"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type App struct {
@@ -37,6 +38,7 @@ type App struct {
 	clientHTTP  *http.Client
 	errChan     chan errs.TgError
 	loginUsers  map[int64]string
+	chatGPT     gpt3.ChatGPT
 }
 
 func New(name string) App {
@@ -45,9 +47,14 @@ func New(name string) App {
 	}
 }
 
+func (a *App) initGPT() {
+	a.chatGPT = gpt3.Init("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", "gpt-3.5-turbo")
+}
+
 func (a *App) Run(ctx context.Context) {
 	a.populateConfig()
 	a.initLogger()
+	a.initGPT()
 	a.listenErrs(ctx)
 	a.initTgBot()
 	a.initHTTPClient()
@@ -134,6 +141,32 @@ func (a *App) listenTgBot() {
 						}
 						continue
 					}
+
+				case strings.Contains(update.CallbackQuery.Data, "view_data"):
+					data := strings.Split(update.CallbackQuery.Data, ":")
+					if len(data) < 2 {
+						a.errChan <- errs.TgError{
+							Err:    errs.BadRequestError{},
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+						continue
+					}
+
+					answ, err := a.chatGPT.GetCompletion(fmt.Sprintf("расскажи мне об этой машине: %s", data[1]))
+					if err != nil {
+						a.errChan <- errs.TgError{
+							Err:    errs.BadRequestError{},
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+					}
+
+					if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, answ)); err != nil {
+						a.errChan <- errs.TgError{
+							Err:    err,
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+						continue
+					}
 				}
 			}
 
@@ -171,25 +204,6 @@ func (a *App) listenTgBot() {
 				continue
 			}
 
-			buyButton := tgbotapi.NewInlineKeyboardButtonData("buy", fmt.Sprintf("buy_data:%s", strconv.Itoa(id)))
-			viewButton := tgbotapi.NewInlineKeyboardButtonData("view", "view_data")
-
-			row := tgbotapi.NewInlineKeyboardRow(buyButton, viewButton)
-
-			inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(row)
-
-			message := tgbotapi.NewMessage(update.Message.Chat.ID, carResp)
-
-			message.ReplyMarkup = inlineKeyboard
-
-			if _, err := a.tgbot.Send(message); err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
-
 			imageBytes, err := base64.StdEncoding.DecodeString(carImage)
 			if err != nil {
 				a.errChan <- errs.TgError{
@@ -202,6 +216,25 @@ func (a *App) listenTgBot() {
 			photo := tgbotapi.FileBytes{Name: "image.jpg", Bytes: imageBytes}
 
 			if _, err := a.tgbot.Send(tgbotapi.NewPhoto(update.Message.Chat.ID, photo)); err != nil {
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
+				continue
+			}
+
+			buyButton := tgbotapi.NewInlineKeyboardButtonData("buy", fmt.Sprintf("buy_data:%s", strconv.Itoa(id)))
+			viewButton := tgbotapi.NewInlineKeyboardButtonData("view", fmt.Sprintf("view_data:%s %s", carResp.Name, carResp.Model))
+
+			row := tgbotapi.NewInlineKeyboardRow(buyButton, viewButton)
+
+			inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(row)
+
+			message := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("имя: %s, модель: %s, цена: %d", carResp.Name, carResp.Model, carResp.Price))
+
+			message.ReplyMarkup = inlineKeyboard
+
+			if _, err := a.tgbot.Send(message); err != nil {
 				a.errChan <- errs.TgError{
 					Err:    err,
 					ChatID: update.Message.Chat.ID,

@@ -5,6 +5,7 @@ go 1.19
 require (
 	github.com/andReyM228/lib/auth v1.0.0
 	github.com/andReyM228/lib/errs v1.0.5
+	github.com/andReyM228/lib/log v0.0.0-20230530155857-6b74a1ce1330
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gofiber/fiber/v2 v2.42.0
 	github.com/lib/pq v1.2.0
@@ -13,7 +14,7 @@ require (
 )
 
 require (
-	github.com/andReyM228/lib/log v0.0.0-20230530155857-6b74a1ce1330 // indirect
+	github.com/andReyM228/lib/gpt3 v1.0.6 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/google/uuid v1.3.0 // indirect

@@ -2,13 +2,14 @@ package main
 
 import (
 	"context"
-	_ "github.com/lib/pq"
 	"log"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"tg_service/internal/app"
+
+	_ "github.com/lib/pq"
 )
 
 const serviceName = "tg_service"

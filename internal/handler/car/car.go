@@ -1,10 +1,11 @@
 package car
 
 import (
-	"fmt"
+	"tg_service/internal/domain"
+	"tg_service/internal/service/car"
+
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"github.com/gofiber/fiber/v2"
-	"tg_service/internal/service/car"
 )
 
 type Handler struct {
@@ -19,13 +20,13 @@ func NewHandler(service car.Service, tgbot *tgbotapi.BotAPI) Handler {
 	}
 }
 
-func (h Handler) Get(id int64, token string) (string, string, error) {
+func (h Handler) Get(id int64, token string) (domain.Car, string, error) {
 	car, err := h.carService.GetCar(id, token)
 	if err != nil {
-		return "", "", err
+		return domain.Car{}, "", err
 	}
 
-	return fmt.Sprintf("имя: %s, модель: %s, цена: %d", car.Name, car.Model, car.Price), car.Image, nil
+	return car, car.Image, nil
 }
 
 func (h Handler) BuyCar(chatID, carID int64) error {

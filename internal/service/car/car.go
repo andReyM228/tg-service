@@ -1,11 +1,12 @@
 package car
 
 import (
-	"github.com/andReyM228/lib/errs"
-	"github.com/andReyM228/lib/log"
 	"tg_service/internal/domain"
 	"tg_service/internal/repository"
 	"tg_service/internal/repository/cars"
+
+	"github.com/andReyM228/lib/errs"
+	"github.com/andReyM228/lib/log"
 )
 
 type Service struct {
