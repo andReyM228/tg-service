@@ -3,25 +3,38 @@ package app
 import (
 	"context"
 	"encoding/base64"
+	"encoding/json"
 	"fmt"
+	"github.com/andReyM228/lib/errs"
+	"github.com/andReyM228/lib/gpt3"
+	"github.com/andReyM228/lib/log"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	stdLog "log"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
-
 	"tg_service/internal/config"
+	"tg_service/internal/domain"
 	car_handler "tg_service/internal/handler/car"
 	user_handler "tg_service/internal/handler/user"
 	"tg_service/internal/repository/cars"
 	"tg_service/internal/repository/user"
 	"tg_service/internal/service/car"
 	user_service "tg_service/internal/service/user"
+)
 
-	"github.com/andReyM228/lib/errs"
-	"github.com/andReyM228/lib/gpt3"
-	"github.com/andReyM228/lib/log"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
+const (
+	characteristicsAnswerBody = `
+Engine: %s,	
+Drive Type: %s,	
+Power: %s,	
+Acceleration: %s,	
+Top Speed: %s,	
+Fuel Economy: %s,	
+Transmission: %s,
+						`
+	characteristicsRequest = "опиши мне главные характеристики машины %s в виде одного json на английском, с полями: engine, power, acceleration, top_speed, fuel_economy, transmission, drive_type"
 )
 
 type App struct {
@@ -48,7 +61,7 @@ func New(name string) App {
 }
 
 func (a *App) initGPT() {
-	a.chatGPT = gpt3.Init("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", "gpt-3.5-turbo")
+	a.chatGPT = gpt3.Init(a.config.ChatGPT.Key, a.config.ChatGPT.Model)
 }
 
 func (a *App) Run(ctx context.Context) {
@@ -167,6 +180,44 @@ func (a *App) listenTgBot() {
 						}
 						continue
 					}
+
+				case strings.Contains(update.CallbackQuery.Data, "characteristics_data"):
+					data := strings.Split(update.CallbackQuery.Data, ":")
+					if len(data) < 2 {
+						a.errChan <- errs.TgError{
+							Err:    errs.BadRequestError{},
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+						continue
+					}
+
+					answ, err := a.chatGPT.GetCompletion(fmt.Sprintf(characteristicsRequest, data[1]))
+					if err != nil {
+						a.errChan <- errs.TgError{
+							Err:    errs.BadRequestError{},
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+					}
+
+					var result domain.CarCharacteristics
+
+					err = json.Unmarshal([]byte(answ), &result)
+					if err != nil {
+						a.errChan <- errs.TgError{
+							Err:    errs.BadRequestError{},
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+					}
+
+					answer := fmt.Sprintf(characteristicsAnswerBody, result.Engine, result.DriveType, result.Power, result.Acceleration, result.TopSpeed, result.FuelEconomy, result.Transmission)
+
+					if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, answer)); err != nil {
+						a.errChan <- errs.TgError{
+							Err:    err,
+							ChatID: update.CallbackQuery.Message.Chat.ID,
+						}
+						continue
+					}
 				}
 			}
 
@@ -225,8 +276,42 @@ func (a *App) listenTgBot() {
 
 			buyButton := tgbotapi.NewInlineKeyboardButtonData("buy", fmt.Sprintf("buy_data:%s", strconv.Itoa(id)))
 			viewButton := tgbotapi.NewInlineKeyboardButtonData("view", fmt.Sprintf("view_data:%s %s", carResp.Name, carResp.Model))
+			characteristicsButton := tgbotapi.NewInlineKeyboardButtonData("characteristics", fmt.Sprintf("characteristics_data:%s %s", carResp.Name, carResp.Model))
 
-			row := tgbotapi.NewInlineKeyboardRow(buyButton, viewButton)
+			row := tgbotapi.NewInlineKeyboardRow(buyButton, viewButton, characteristicsButton)
+
+			inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(row)
+
+			message := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("имя: %s, модель: %s, цена: %d", carResp.Name, carResp.Model, carResp.Price))
+
+			message.ReplyMarkup = inlineKeyboard
+
+			if _, err := a.tgbot.Send(message); err != nil {
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
+				continue
+			}
+
+		case strings.Contains(update.Message.Text, "/get-cars"):
+			msg := strings.Split(update.Message.Text, ":")
+
+			carsResp, err := a.carHandler.GetAll(a.loginUsers[update.Message.Chat.ID])
+			if err != nil {
+				a.errChan <- errs.TgError{
+					Err:    err,
+					ChatID: update.Message.Chat.ID,
+				}
+				continue
+			}
+
+			var buttons []tgbotapi.InlineKeyboardButton
+			for _, c := range carsResp.Cars {
+				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("buy", fmt.Sprintf("get_full_info_data:%d", c.ID)))
+			}
+
+			row := tgbotapi.NewInlineKeyboardRow(buttons...)
 
 			inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(row)
 

@@ -40,6 +40,25 @@ func (s Service) GetCar(carID int64, token string) (domain.Car, error) {
 	return car, nil
 }
 
+func (s Service) GetCars(token string) (domain.Cars, error) {
+	cars, err := s.cars.GetAll(token)
+	if err != nil {
+		switch err.(type) {
+		case repository.BadRequest:
+			return domain.Cars{}, errs.BadRequestError{Cause: err.Error()}
+		case repository.Unauthorized:
+			return domain.Cars{}, errs.UnauthorizedError{Cause: err.Error()}
+		case repository.NotFound:
+			return domain.Cars{}, errs.NotFoundError{What: err.Error()}
+		default:
+			s.log.Error(err.Error())
+			return domain.Cars{}, errs.InternalError{Cause: ""}
+		}
+	}
+
+	return cars, nil
+}
+
 func (s Service) BuyCar(chatID, carID int64) error {
 	err := s.cars.BuyCar(chatID, carID)
 	if err != nil {

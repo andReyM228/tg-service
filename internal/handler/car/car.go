@@ -29,6 +29,15 @@ func (h Handler) Get(id int64, token string) (domain.Car, string, error) {
 	return car, car.Image, nil
 }
 
+func (h Handler) GetAll(token string) (domain.Cars, error) {
+	cars, err := h.carService.GetCars(token)
+	if err != nil {
+		return domain.Cars{}, err
+	}
+
+	return cars, nil
+}
+
 func (h Handler) BuyCar(chatID, carID int64) error {
 	err := h.carService.BuyCar(chatID, carID)
 	if err != nil {

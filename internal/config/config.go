@@ -8,11 +8,17 @@ import (
 
 type (
 	Config struct {
-		TgBot TgBot `yaml:"tg-bot"`
+		TgBot   TgBot   `yaml:"tg-bot"`
+		ChatGPT ChatGPT `yaml:"chat-gpt"`
 	}
 
 	TgBot struct {
 		Token string `yaml:"token"`
+	}
+
+	ChatGPT struct {
+		Key   string `yaml:"key"`
+		Model string `yaml:"model"`
 	}
 )
 
