@@ -2,9 +2,6 @@ package app
 
 import (
 	"context"
-	"encoding/base64"
-	"encoding/json"
-	"fmt"
 	"github.com/andReyM228/lib/errs"
 	"github.com/andReyM228/lib/gpt3"
 	"github.com/andReyM228/lib/log"
@@ -12,29 +9,15 @@ import (
 	stdLog "log"
 	"net/http"
 	"os"
-	"strconv"
 	"strings"
 	"tg_service/internal/config"
-	"tg_service/internal/domain"
 	car_handler "tg_service/internal/handler/car"
 	user_handler "tg_service/internal/handler/user"
 	"tg_service/internal/repository/cars"
 	"tg_service/internal/repository/user"
 	"tg_service/internal/service/car"
 	user_service "tg_service/internal/service/user"
-)
-
-const (
-	characteristicsAnswerBody = `
-Engine: %s,	
-Drive Type: %s,	
-Power: %s,	
-Acceleration: %s,	
-Top Speed: %s,	
-Fuel Economy: %s,	
-Transmission: %s,
-						`
-	characteristicsRequest = "опиши мне главные характеристики машины %s в виде одного json на английском, с полями: engine, power, acceleration, top_speed, fuel_economy, transmission, drive_type"
+	"tg_service/internal/tg_handlers"
 )
 
 type App struct {
@@ -48,6 +31,7 @@ type App struct {
 	carService  car.Service
 	userHandler user_handler.Handler
 	carHandler  car_handler.Handler
+	tgHandler   tg_handlers.Handler
 	clientHTTP  *http.Client
 	errChan     chan errs.TgError
 	loginUsers  map[int64]string
@@ -120,104 +104,21 @@ func (a *App) listenTgBot() {
 			if update.CallbackQuery != nil {
 				switch {
 				case strings.Contains(update.CallbackQuery.Data, "buy_data"):
-					data := strings.Split(update.CallbackQuery.Data, ":")
-					if len(data) < 2 {
-						a.errChan <- errs.TgError{
-							Err:    errs.BadRequestError{},
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-						continue
-					}
-
-					carID, err := strconv.Atoi(data[1])
-					if err != nil {
-						a.errChan <- errs.TgError{
-							Err:    err,
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-						continue
-					}
-
-					err = a.carHandler.BuyCar(update.CallbackQuery.Message.Chat.ID, int64(carID))
-					if err != nil {
-						a.errChan <- errs.TgError{
-							Err:    err,
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-						continue
-					}
-
-					if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "congratulations!, you bought a car")); err != nil {
-						a.errChan <- errs.TgError{
-							Err:    err,
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-						continue
-					}
+					go a.tgHandler.BuyDataButton(update)
+					continue
 
 				case strings.Contains(update.CallbackQuery.Data, "view_data"):
-					data := strings.Split(update.CallbackQuery.Data, ":")
-					if len(data) < 2 {
-						a.errChan <- errs.TgError{
-							Err:    errs.BadRequestError{},
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-						continue
-					}
-
-					answ, err := a.chatGPT.GetCompletion(fmt.Sprintf("расскажи мне об этой машине: %s", data[1]))
-					if err != nil {
-						a.errChan <- errs.TgError{
-							Err:    errs.BadRequestError{},
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-					}
-
-					if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, answ)); err != nil {
-						a.errChan <- errs.TgError{
-							Err:    err,
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-						continue
-					}
+					go a.tgHandler.ViewDataButton(update)
+					continue
 
 				case strings.Contains(update.CallbackQuery.Data, "characteristics_data"):
-					data := strings.Split(update.CallbackQuery.Data, ":")
-					if len(data) < 2 {
-						a.errChan <- errs.TgError{
-							Err:    errs.BadRequestError{},
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-						continue
-					}
+					go a.tgHandler.CharacteristicsDataButton(update)
+					continue
 
-					answ, err := a.chatGPT.GetCompletion(fmt.Sprintf(characteristicsRequest, data[1]))
-					if err != nil {
-						a.errChan <- errs.TgError{
-							Err:    errs.BadRequestError{},
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-					}
+				case strings.Contains(update.CallbackQuery.Data, "all_car_data"):
+					go a.tgHandler.AllCarDataButton(update, a.loginUsers)
+					continue
 
-					var result domain.CarCharacteristics
-
-					err = json.Unmarshal([]byte(answ), &result)
-					if err != nil {
-						a.errChan <- errs.TgError{
-							Err:    errs.BadRequestError{},
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-					}
-
-					answer := fmt.Sprintf(characteristicsAnswerBody, result.Engine, result.DriveType, result.Power, result.Acceleration, result.TopSpeed, result.FuelEconomy, result.Transmission)
-
-					if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, answer)); err != nil {
-						a.errChan <- errs.TgError{
-							Err:    err,
-							ChatID: update.CallbackQuery.Message.Chat.ID,
-						}
-						continue
-					}
 				}
 			}
 
@@ -226,157 +127,28 @@ func (a *App) listenTgBot() {
 
 		switch {
 		case strings.Contains(update.Message.Text, "/start"):
-			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "введите /registration чтобы зарегестрироваться, и /login чтобы войти")); err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
+			go a.tgHandler.StartHandler(update)
+			continue
 
 		case strings.Contains(update.Message.Text, "/get-car"):
-			msg := strings.Split(update.Message.Text, ":")
+			go a.tgHandler.GetCarHandler(update, a.loginUsers)
+			continue
 
-			id, err := strconv.Atoi(msg[1])
-			if err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
-
-			carResp, carImage, err := a.carHandler.Get(int64(id), a.loginUsers[update.Message.Chat.ID])
-			if err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
-
-			imageBytes, err := base64.StdEncoding.DecodeString(carImage)
-			if err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
-
-			photo := tgbotapi.FileBytes{Name: "image.jpg", Bytes: imageBytes}
-
-			if _, err := a.tgbot.Send(tgbotapi.NewPhoto(update.Message.Chat.ID, photo)); err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
-
-			buyButton := tgbotapi.NewInlineKeyboardButtonData("buy", fmt.Sprintf("buy_data:%s", strconv.Itoa(id)))
-			viewButton := tgbotapi.NewInlineKeyboardButtonData("view", fmt.Sprintf("view_data:%s %s", carResp.Name, carResp.Model))
-			characteristicsButton := tgbotapi.NewInlineKeyboardButtonData("characteristics", fmt.Sprintf("characteristics_data:%s %s", carResp.Name, carResp.Model))
-
-			row := tgbotapi.NewInlineKeyboardRow(buyButton, viewButton, characteristicsButton)
-
-			inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(row)
-
-			message := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("имя: %s, модель: %s, цена: %d", carResp.Name, carResp.Model, carResp.Price))
-
-			message.ReplyMarkup = inlineKeyboard
-
-			if _, err := a.tgbot.Send(message); err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
-
-		case strings.Contains(update.Message.Text, "/get-cars"):
-			msg := strings.Split(update.Message.Text, ":")
-
-			carsResp, err := a.carHandler.GetAll(a.loginUsers[update.Message.Chat.ID])
-			if err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
-
-			var buttons []tgbotapi.InlineKeyboardButton
-			for _, c := range carsResp.Cars {
-				buttons = append(buttons, tgbotapi.NewInlineKeyboardButtonData("buy", fmt.Sprintf("get_full_info_data:%d", c.ID)))
-			}
-
-			row := tgbotapi.NewInlineKeyboardRow(buttons...)
-
-			inlineKeyboard := tgbotapi.NewInlineKeyboardMarkup(row)
-
-			message := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("имя: %s, модель: %s, цена: %d", carResp.Name, carResp.Model, carResp.Price))
-
-			message.ReplyMarkup = inlineKeyboard
-
-			if _, err := a.tgbot.Send(message); err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
+		case strings.Contains(update.Message.Text, "/all-cars"):
+			go a.tgHandler.AllCarsHandler(update)
+			continue
 
 		case strings.Contains(update.Message.Text, "/get-user"):
-			msg := strings.Split(update.Message.Text, ":")
-
-			id, err := strconv.Atoi(msg[1])
-			if err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
-
-			userResp, err := a.userHandler.Get(int64(id))
-			if err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
-
-			if _, err := a.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, userResp)); err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
+			go a.tgHandler.GetUserHandler(update)
+			continue
 
 		case strings.Contains(update.Message.Text, "/registration"):
-			err := a.userHandler.Create(updates, update.Message.Chat.ID)
-			if err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-				continue
-			}
+			go a.tgHandler.RegistrationHandler(update, updates)
+			continue
+
 		case strings.Contains(update.Message.Text, "/login"):
-			err := a.userHandler.Login(updates, update.Message.Chat.ID)
-			if err != nil {
-				a.errChan <- errs.TgError{
-					Err:    err,
-					ChatID: update.Message.Chat.ID,
-				}
-
-				continue
-			}
-
-			a.logger.Debugf("map: %v", a.loginUsers)
+			go a.tgHandler.LoginHandler(update, updates)
+			continue
 
 		}
 	}
@@ -404,6 +176,8 @@ func (a *App) initHandlers() {
 	a.loginUsers = map[int64]string{}
 	a.carHandler = car_handler.NewHandler(a.carService, a.tgbot)
 	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.loginUsers)
+	a.tgHandler = tg_handlers.NewHandler(a.tgbot, a.userHandler, a.carHandler, a.errChan, a.chatGPT)
+
 	a.logger.Debug("handlers created")
 }
 

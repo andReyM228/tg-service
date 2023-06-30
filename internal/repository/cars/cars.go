@@ -69,8 +69,8 @@ func (r Repository) Get(id int64, token string) (domain.Car, error) {
 	return car, nil
 }
 
-func (r Repository) GetAll(token string) (domain.Cars, error) {
-	url := "http://localhost:3000/v1/user-service/cars"
+func (r Repository) GetAll(token, label string) (domain.Cars, error) {
+	url := fmt.Sprintf("http://localhost:3000/v1/user-service/cars/%s", label)
 
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {

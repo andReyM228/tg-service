@@ -2,5 +2,5 @@ tg-bot:
   token: 6231439207:AAFNcJUDPziOUe1fAqAxY2HZ5U7DHvkR634
 
 chat-gpt:
-  key: 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
+  key: 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
   model: gpt-3.5-turbo

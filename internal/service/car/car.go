@@ -40,8 +40,8 @@ func (s Service) GetCar(carID int64, token string) (domain.Car, error) {
 	return car, nil
 }
 
-func (s Service) GetCars(token string) (domain.Cars, error) {
-	cars, err := s.cars.GetAll(token)
+func (s Service) GetCars(token, label string) (domain.Cars, error) {
+	cars, err := s.cars.GetAll(token, label)
 	if err != nil {
 		switch err.(type) {
 		case repository.BadRequest:
