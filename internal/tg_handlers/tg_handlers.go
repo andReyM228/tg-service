@@ -29,8 +29,8 @@ func NewHandler(tgbot *tgbotapi.BotAPI, userHandler user.Handler, carHandler car
 	}
 }
 
-func (h Handler) RegistrationHandler(update tgbotapi.Update, updates tgbotapi.UpdatesChannel) {
-	err := h.userHandler.Create(updates, update.Message.Chat.ID)
+func (h Handler) RegistrationHandler(update tgbotapi.Update) {
+	err := h.userHandler.Create(update.Message.Chat.ID, update)
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,

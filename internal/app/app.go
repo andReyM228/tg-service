@@ -5,12 +5,14 @@ import (
 	"github.com/andReyM228/lib/errs"
 	"github.com/andReyM228/lib/gpt3"
 	"github.com/andReyM228/lib/log"
+	"github.com/go-playground/validator/v10"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	stdLog "log"
 	"net/http"
 	"os"
 	"strings"
 	"tg_service/internal/config"
+	"tg_service/internal/domain"
 	car_handler "tg_service/internal/handler/car"
 	user_handler "tg_service/internal/handler/user"
 	"tg_service/internal/repository/cars"
@@ -21,21 +23,23 @@ import (
 )
 
 type App struct {
-	config      config.Config
-	serviceName string
-	tgbot       *tgbotapi.BotAPI
-	logger      log.Logger
-	usersRepo   user.Repository
-	carsRepo    cars.Repository
-	userService user_service.Service
-	carService  car.Service
-	userHandler user_handler.Handler
-	carHandler  car_handler.Handler
-	tgHandler   tg_handlers.Handler
-	clientHTTP  *http.Client
-	errChan     chan errs.TgError
-	loginUsers  map[int64]string
-	chatGPT     gpt3.ChatGPT
+	config                      config.Config
+	serviceName                 string
+	tgbot                       *tgbotapi.BotAPI
+	logger                      log.Logger
+	validator                   *validator.Validate
+	usersRepo                   user.Repository
+	carsRepo                    cars.Repository
+	userService                 user_service.Service
+	carService                  car.Service
+	userHandler                 user_handler.Handler
+	carHandler                  car_handler.Handler
+	tgHandler                   tg_handlers.Handler
+	clientHTTP                  *http.Client
+	errChan                     chan errs.TgError
+	loginUsers                  map[int64]string
+	chatGPT                     gpt3.ChatGPT
+	processingRegistrationUsers domain.ProcessingRegistrationUsers
 }
 
 func New(name string) App {
@@ -49,6 +53,7 @@ func (a *App) initGPT() {
 }
 
 func (a *App) Run(ctx context.Context) {
+	a.initValidator()
 	a.populateConfig()
 	a.initLogger()
 	a.initGPT()
@@ -100,6 +105,11 @@ func (a *App) listenTgBot() {
 	a.logger.Debug("tg_bot api started")
 
 	for update := range updates {
+		if update.Message != nil {
+			if a.processingRegistrationUsers.IfExists(update.Message.Chat.ID) {
+				go a.tgHandler.RegistrationHandler(update)
+			}
+		}
 		if update.Message == nil {
 			if update.CallbackQuery != nil {
 				switch {
@@ -143,7 +153,7 @@ func (a *App) listenTgBot() {
 			continue
 
 		case strings.Contains(update.Message.Text, "/registration"):
-			go a.tgHandler.RegistrationHandler(update, updates)
+			go a.tgHandler.RegistrationHandler(update)
 			continue
 
 		case strings.Contains(update.Message.Text, "/login"):
@@ -156,6 +166,10 @@ func (a *App) listenTgBot() {
 
 func (a *App) initLogger() {
 	a.logger = log.Init()
+}
+
+func (a *App) initValidator() {
+	a.validator = validator.New()
 }
 
 func (a *App) initRepos() {
@@ -175,7 +189,7 @@ func (a *App) initServices() {
 func (a *App) initHandlers() {
 	a.loginUsers = map[int64]string{}
 	a.carHandler = car_handler.NewHandler(a.carService, a.tgbot)
-	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.loginUsers)
+	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.loginUsers, &a.processingRegistrationUsers)
 	a.tgHandler = tg_handlers.NewHandler(a.tgbot, a.userHandler, a.carHandler, a.errChan, a.chatGPT)
 
 	a.logger.Debug("handlers created")
@@ -184,7 +198,12 @@ func (a *App) initHandlers() {
 func (a *App) populateConfig() {
 	cfg, err := config.ParseConfig()
 	if err != nil {
-		stdLog.Fatal()
+		stdLog.Fatal(err)
+	}
+
+	err = cfg.ValidateConfig(a.validator)
+	if err != nil {
+		stdLog.Fatal(err)
 	}
 
 	a.config = cfg

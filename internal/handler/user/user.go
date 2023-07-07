@@ -14,16 +14,18 @@ import (
 )
 
 type Handler struct {
-	userService user.Service
-	tgbot       *tgbotapi.BotAPI
-	loginMap    map[int64]string
+	userService                 user.Service
+	tgbot                       *tgbotapi.BotAPI
+	loginMap                    map[int64]string
+	processingRegistrationUsers *domain.ProcessingRegistrationUsers
 }
 
-func NewHandler(service user.Service, tgbot *tgbotapi.BotAPI, loginMap map[int64]string) Handler {
+func NewHandler(service user.Service, tgbot *tgbotapi.BotAPI, loginMap map[int64]string, processingRegistrationUsers *domain.ProcessingRegistrationUsers) Handler {
 	return Handler{
-		userService: service,
-		tgbot:       tgbot,
-		loginMap:    loginMap,
+		userService:                 service,
+		tgbot:                       tgbot,
+		loginMap:                    loginMap,
+		processingRegistrationUsers: processingRegistrationUsers,
 	}
 }
 
@@ -41,18 +43,31 @@ func (h Handler) Update(ctx *fiber.Ctx) error {
 	return nil
 }
 
-func (h Handler) Create(updates tgbotapi.UpdatesChannel, chatID int64) error {
-	var user domain.User
+func (h Handler) Create(chatID int64, update tgbotapi.Update) error {
+	processUser := h.processingRegistrationUsers.GetOrCreate(chatID)
 
-	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите имя")); err != nil {
-		log.Fatal(err)
-	}
-
-	for update := range updates {
-		if update.Message == nil {
-			continue
+	switch processUser.Step {
+	case domain.RegistrationStepStart:
+		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите имя")); err != nil {
+			log.Fatal(err)
 		}
 
+		h.processingRegistrationUsers.UpdateRegistrationStep(chatID, domain.RegistrationStepName)
+	case domain.RegistrationStepName:
+		if update.Message.Text == "/exit" {
+			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация прервана")); err != nil {
+				log.Fatal(err)
+			}
+			return nil
+		}
+		h.processingRegistrationUsers.SetName(chatID, update.Message.Text)
+
+		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите фамилию")); err != nil {
+			log.Fatal(err)
+		}
+
+		h.processingRegistrationUsers.UpdateRegistrationStep(chatID, domain.RegistrationStepSurname)
+	case domain.RegistrationStepSurname:
 		if update.Message.Text == "/exit" {
 			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация прервана")); err != nil {
 				log.Fatal(err)
@@ -61,19 +76,15 @@ func (h Handler) Create(updates tgbotapi.UpdatesChannel, chatID int64) error {
 			return nil
 		}
 
-		user.Name = update.Message.Text
-		break
-	}
+		h.processingRegistrationUsers.SetSurname(chatID, update.Message.Text)
 
-	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите фамилию")); err != nil {
-		log.Fatal(err)
-	}
-
-	for update := range updates {
-		if update.Message == nil {
-			continue
+		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите номер телефона")); err != nil {
+			log.Fatal(err)
 		}
 
+		h.processingRegistrationUsers.UpdateRegistrationStep(chatID, domain.RegistrationStepPhone)
+
+	case domain.RegistrationStepPhone:
 		if update.Message.Text == "/exit" {
 			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация прервана")); err != nil {
 				log.Fatal(err)
@@ -82,19 +93,15 @@ func (h Handler) Create(updates tgbotapi.UpdatesChannel, chatID int64) error {
 			return nil
 		}
 
-		user.Surname = update.Message.Text
-		break
-	}
+		h.processingRegistrationUsers.SetPhone(chatID, update.Message.Text)
 
-	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите номер телефона")); err != nil {
-		log.Fatal(err)
-	}
-
-	for update := range updates {
-		if update.Message == nil {
-			continue
+		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите електронную почту")); err != nil {
+			log.Fatal(err)
 		}
 
+		h.processingRegistrationUsers.UpdateRegistrationStep(chatID, domain.RegistrationStepEmail)
+
+	case domain.RegistrationStepEmail:
 		if update.Message.Text == "/exit" {
 			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация прервана")); err != nil {
 				log.Fatal(err)
@@ -103,19 +110,15 @@ func (h Handler) Create(updates tgbotapi.UpdatesChannel, chatID int64) error {
 			return nil
 		}
 
-		user.Phone = update.Message.Text
-		break
-	}
+		h.processingRegistrationUsers.SetEmail(chatID, update.Message.Text)
 
-	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите електронную почту")); err != nil {
-		log.Fatal(err)
-	}
-
-	for update := range updates {
-		if update.Message == nil {
-			continue
+		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите пароль")); err != nil {
+			log.Fatal(err)
 		}
 
+		h.processingRegistrationUsers.UpdateRegistrationStep(chatID, domain.RegistrationStepPassword)
+
+	case domain.RegistrationStepPassword:
 		if update.Message.Text == "/exit" {
 			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация прервана")); err != nil {
 				log.Fatal(err)
@@ -124,34 +127,17 @@ func (h Handler) Create(updates tgbotapi.UpdatesChannel, chatID int64) error {
 			return nil
 		}
 
-		user.Email = update.Message.Text
-		break
-	}
+		h.processingRegistrationUsers.SetPassword(chatID, update.Message.Text)
 
-	if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите пароль")); err != nil {
-		log.Fatal(err)
-	}
-
-	for update := range updates {
-		if update.Message == nil {
-			continue
+		if err := h.userService.CreateUser(h.processingRegistrationUsers.GetOrCreate(chatID).User); err != nil {
+			return err
 		}
 
-		if update.Message.Text == "/exit" {
-			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация прервана")); err != nil {
-				log.Fatal(err)
-			}
-
-			return nil
+		h.processingRegistrationUsers.Delete(chatID)
+		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация успешна")); err != nil {
+			log.Fatal(err)
 		}
 
-		user.Password = update.Message.Text
-		user.ChatID = update.Message.Chat.ID
-		break
-	}
-
-	if err := h.userService.CreateUser(user); err != nil {
-		return err
 	}
 
 	return nil
