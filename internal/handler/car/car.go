@@ -38,8 +38,26 @@ func (h Handler) GetAll(token, label string) (domain.Cars, error) {
 	return cars, nil
 }
 
+func (h Handler) GetUserCars(token string) (domain.Cars, error) {
+	cars, err := h.carService.GetUserCars(token)
+	if err != nil {
+		return domain.Cars{}, err
+	}
+
+	return cars, nil
+}
+
 func (h Handler) BuyCar(chatID, carID int64) error {
 	err := h.carService.BuyCar(chatID, carID)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (h Handler) SellCar(chatID, carID int64) error {
+	err := h.carService.SellCar(chatID, carID)
 	if err != nil {
 		return err
 	}

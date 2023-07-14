@@ -30,7 +30,7 @@ func (h Handler) AllCarDataButton(update tgbotapi.Update, loginUsers map[int64]s
 	}
 
 	for _, car := range cars.Cars {
-		photo, inlineKeyboard, err := h.carHandler.PrepareCars(car)
+		photo, inlineKeyboard, err := h.carHandler.PrepareCars(car, false)
 		if err != nil {
 			h.errChan <- errs.TgError{
 				Err:    err,
@@ -156,6 +156,43 @@ func (h Handler) BuyDataButton(update tgbotapi.Update) {
 	}
 
 	if _, err := h.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "congratulations!, you bought a car")); err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.CallbackQuery.Message.Chat.ID,
+		}
+		return
+	}
+}
+
+func (h Handler) SellDataButton(update tgbotapi.Update) {
+	data := strings.Split(update.CallbackQuery.Data, ":")
+	if len(data) < 2 {
+		h.errChan <- errs.TgError{
+			Err:    errs.BadRequestError{},
+			ChatID: update.CallbackQuery.Message.Chat.ID,
+		}
+		return
+	}
+
+	carID, err := strconv.Atoi(data[1])
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.CallbackQuery.Message.Chat.ID,
+		}
+		return
+	}
+
+	err = h.carHandler.SellCar(update.CallbackQuery.Message.Chat.ID, int64(carID))
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.CallbackQuery.Message.Chat.ID,
+		}
+		return
+	}
+
+	if _, err := h.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "congratulations!, you sell car")); err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,
 			ChatID: update.CallbackQuery.Message.Chat.ID,

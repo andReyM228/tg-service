@@ -11,6 +11,9 @@ const (
 	RegistrationStepEmail    = "email"
 	RegistrationStepPhone    = "phone"
 	RegistrationStepPassword = "password"
+
+	LoginStepStart    = "start"
+	LoginStepPassword = "password"
 )
 
 type Car struct {
@@ -173,7 +176,7 @@ func (r *ProcessingRegistrationUsers) Delete(chatID int64) {
 
 //---------------------------------------------------------------------------------------
 
-func (r ProcessingLoginUsers) UpdateRegistrationStep(chatID int64, step string) {
+func (r ProcessingLoginUsers) UpdateLoginStep(chatID int64, step string) {
 	for i, usr := range r {
 		if usr.ChatID == chatID {
 			usr.Step = step

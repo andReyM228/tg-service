@@ -70,6 +70,49 @@ func (h Handler) AllCarsHandler(update tgbotapi.Update) {
 	}
 }
 
+func (h Handler) GetMyCarsHandler(update tgbotapi.Update, loginUsers map[int64]string) {
+
+	cars, err := h.carHandler.GetUserCars(loginUsers[update.Message.Chat.ID])
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.Message.Chat.ID,
+		}
+		return
+	}
+
+	for _, car := range cars.Cars {
+		photo, inlineKeyboard, err := h.carHandler.PrepareCars(car, true)
+		if err != nil {
+			h.errChan <- errs.TgError{
+				Err:    err,
+				ChatID: update.Message.Chat.ID,
+			}
+			continue
+		}
+
+		if _, err := h.tgbot.Send(tgbotapi.NewPhoto(update.Message.Chat.ID, photo)); err != nil {
+			h.errChan <- errs.TgError{
+				Err:    err,
+				ChatID: update.Message.Chat.ID,
+			}
+			continue
+		}
+
+		message := tgbotapi.NewMessage(update.Message.Chat.ID, fmt.Sprintf("имя: %s, модель: %s, цена: %d", car.Name, car.Model, car.Price))
+
+		message.ReplyMarkup = inlineKeyboard
+
+		if _, err := h.tgbot.Send(message); err != nil {
+			h.errChan <- errs.TgError{
+				Err:    err,
+				ChatID: update.Message.Chat.ID,
+			}
+			continue
+		}
+	}
+}
+
 func (h Handler) GetUserHandler(update tgbotapi.Update) {
 	msg := strings.Split(update.Message.Text, ":")
 
@@ -129,7 +172,7 @@ func (h Handler) GetCarHandler(update tgbotapi.Update, loginUsers map[int64]stri
 		return
 	}
 
-	photo, inlineKeyboard, err := h.carHandler.PrepareCars(carResp)
+	photo, inlineKeyboard, err := h.carHandler.PrepareCars(carResp, false)
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,
@@ -169,8 +212,8 @@ func (h Handler) StartHandler(update tgbotapi.Update) {
 	}
 }
 
-func (h Handler) LoginHandler(update tgbotapi.Update, updates tgbotapi.UpdatesChannel) {
-	err := h.userHandler.Login(updates, update.Message.Chat.ID)
+func (h Handler) LoginHandler(update tgbotapi.Update) {
+	err := h.userHandler.Login(update.Message.Chat.ID, update)
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,

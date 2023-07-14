@@ -3,9 +3,9 @@ module tg_service
 go 1.19
 
 require (
-	github.com/andReyM228/lib/auth v1.0.0
+	github.com/andReyM228/lib/auth v1.0.1
 	github.com/andReyM228/lib/errs v1.0.5
-	github.com/andReyM228/lib/gpt3 v1.0.6
+	github.com/andReyM228/lib/gpt3 v1.0.7
 	github.com/andReyM228/lib/log v0.0.0-20230530155857-6b74a1ce1330
 	github.com/go-playground/validator/v10 v10.14.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1

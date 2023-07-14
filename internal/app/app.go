@@ -2,15 +2,11 @@ package app
 
 import (
 	"context"
-	"github.com/andReyM228/lib/errs"
-	"github.com/andReyM228/lib/gpt3"
-	"github.com/andReyM228/lib/log"
-	"github.com/go-playground/validator/v10"
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	stdLog "log"
 	"net/http"
 	"os"
 	"strings"
+
 	"tg_service/internal/config"
 	"tg_service/internal/domain"
 	car_handler "tg_service/internal/handler/car"
@@ -20,6 +16,12 @@ import (
 	"tg_service/internal/service/car"
 	user_service "tg_service/internal/service/user"
 	"tg_service/internal/tg_handlers"
+
+	"github.com/andReyM228/lib/errs"
+	"github.com/andReyM228/lib/gpt3"
+	"github.com/andReyM228/lib/log"
+	"github.com/go-playground/validator/v10"
+	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type App struct {
@@ -40,6 +42,7 @@ type App struct {
 	loginUsers                  map[int64]string
 	chatGPT                     gpt3.ChatGPT
 	processingRegistrationUsers domain.ProcessingRegistrationUsers
+	processingLoginUsers        domain.ProcessingLoginUsers
 }
 
 func New(name string) App {
@@ -108,6 +111,14 @@ func (a *App) listenTgBot() {
 		if update.Message != nil {
 			if a.processingRegistrationUsers.IfExists(update.Message.Chat.ID) {
 				go a.tgHandler.RegistrationHandler(update)
+
+				continue
+			}
+
+			if a.processingLoginUsers.IfExists(update.Message.Chat.ID) {
+				go a.tgHandler.LoginHandler(update)
+
+				continue
 			}
 		}
 		if update.Message == nil {
@@ -115,6 +126,10 @@ func (a *App) listenTgBot() {
 				switch {
 				case strings.Contains(update.CallbackQuery.Data, "buy_data"):
 					go a.tgHandler.BuyDataButton(update)
+					continue
+
+				case strings.Contains(update.CallbackQuery.Data, "sell_data"):
+					go a.tgHandler.SellDataButton(update)
 					continue
 
 				case strings.Contains(update.CallbackQuery.Data, "view_data"):
@@ -152,12 +167,16 @@ func (a *App) listenTgBot() {
 			go a.tgHandler.GetUserHandler(update)
 			continue
 
+		case strings.Contains(update.Message.Text, "/get-my-cars"):
+			go a.tgHandler.GetMyCarsHandler(update, a.loginUsers)
+			continue
+
 		case strings.Contains(update.Message.Text, "/registration"):
 			go a.tgHandler.RegistrationHandler(update)
 			continue
 
 		case strings.Contains(update.Message.Text, "/login"):
-			go a.tgHandler.LoginHandler(update, updates)
+			go a.tgHandler.LoginHandler(update)
 			continue
 
 		}
@@ -189,7 +208,7 @@ func (a *App) initServices() {
 func (a *App) initHandlers() {
 	a.loginUsers = map[int64]string{}
 	a.carHandler = car_handler.NewHandler(a.carService, a.tgbot)
-	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.loginUsers, &a.processingRegistrationUsers)
+	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.loginUsers, &a.processingRegistrationUsers, &a.processingLoginUsers)
 	a.tgHandler = tg_handlers.NewHandler(a.tgbot, a.userHandler, a.carHandler, a.errChan, a.chatGPT)
 
 	a.logger.Debug("handlers created")
