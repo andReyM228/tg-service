@@ -1,5 +1,3 @@
-github.com/andReyM228/lib/auth v1.0.0 h1:ahWHLdRzyBRlhrfoctWSf0G1uvcFF97rAyK1M2V3+Ns=
-github.com/andReyM228/lib/auth v1.0.0/go.mod h1:PRpTOg6L+gbuM3ZxAwe/CZlC5i5I+8SY/qyyIdPbnw0=
 github.com/andReyM228/lib/auth v1.0.1 h1:H/RXDlg7Lh10X0lG/NtyHOp72XsHE6WVKRSruUdsP3g=
 github.com/andReyM228/lib/auth v1.0.1/go.mod h1:PRpTOg6L+gbuM3ZxAwe/CZlC5i5I+8SY/qyyIdPbnw0=
 github.com/andReyM228/lib/errs v1.0.5 h1:S8JZr0GufaIGGYLLa2/DC6fChpVs0iO2/mfwozhxeyA=
