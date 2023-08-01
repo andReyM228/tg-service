@@ -27,7 +27,7 @@ func NewRepository(log log.Logger, client *http.Client) Repository {
 }
 
 func (r Repository) Get(id int64) (domain.User, error) {
-	url := fmt.Sprintf("http://localhost:3000/v1/user-service/user/%d", id)
+	url := fmt.Sprintf("http://user_service:3000/v1/user-service/user/%d", id)
 
 	resp, err := r.client.Get(url)
 	if err != nil {
@@ -62,7 +62,7 @@ func (r Repository) Update() error {
 
 // сделать норм репоситорские ошибки
 func (r Repository) Create(user domain.User) error {
-	url := fmt.Sprintf("http://localhost:3000/v1/user-service/user")
+	url := fmt.Sprintf("http://user_service:3000/v1/user-service/user")
 
 	data, err := json.Marshal(user)
 	if err != nil {
@@ -86,7 +86,7 @@ func (r Repository) Create(user domain.User) error {
 }
 
 func (r Repository) Login(password string, chatID int64) (int64, error) {
-	url := fmt.Sprintf("http://localhost:3000/v1/user-service/user/login")
+	url := fmt.Sprintf("http://user_service:3000/v1/user-service/user/login")
 	request := loginRequest{
 		ChatID:   chatID,
 		Password: password,

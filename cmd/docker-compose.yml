@@ -1,0 +1,46 @@
+services:
+  database:
+    image: postgres:latest
+    container_name: postgres
+    restart: always
+    ports:
+      - 5433:5432
+    environment:
+      POSTGRES_HOST_AUTH_METHOD: trust
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USERNAME: postgres
+    command: postgres
+    networks:
+      - backend
+
+  user_service:
+    image: user_service:latest
+    container_name: user_service
+    restart: always
+    depends_on:
+      - database
+    networks:
+      - backend
+
+
+  tg-service:
+    image: tg-service:latest
+    container_name: tg-service
+    restart: always
+    depends_on:
+      - database
+    networks:
+      - backend
+
+  tx-service:
+    image: tx-service:latest
+    container_name: tx-service
+    restart: always
+    depends_on:
+      - database
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge
