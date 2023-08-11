@@ -2,7 +2,7 @@ package app
 
 import (
 	"context"
-	stdLog "log"
+	"github.com/andReyM228/lib/rabbit"
 	"net/http"
 	"os"
 	"strings"
@@ -24,6 +24,8 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+const urlRabbit = "amqp://guest:guest@localhost:5672/"
+
 type App struct {
 	config                      config.Config
 	serviceName                 string
@@ -43,6 +45,7 @@ type App struct {
 	chatGPT                     gpt3.ChatGPT
 	processingRegistrationUsers domain.ProcessingRegistrationUsers
 	processingLoginUsers        domain.ProcessingLoginUsers
+	rabbit                      rabbit.Rabbit
 }
 
 func New(name string) App {
@@ -57,12 +60,13 @@ func (a *App) initGPT() {
 
 func (a *App) Run(ctx context.Context) {
 	a.initValidator()
-	a.populateConfig()
 	a.initLogger()
+	a.populateConfig()
 	a.initGPT()
 	a.listenErrs(ctx)
 	a.initTgBot()
 	a.initHTTPClient()
+	a.initRabbit()
 	a.initRepos()
 	a.initServices()
 	a.initHandlers()
@@ -193,7 +197,7 @@ func (a *App) initValidator() {
 
 func (a *App) initRepos() {
 	a.carsRepo = cars.NewRepository(a.logger, a.clientHTTP)
-	a.usersRepo = user.NewRepository(a.logger, a.clientHTTP)
+	a.usersRepo = user.NewRepository(a.logger, a.clientHTTP, a.rabbit)
 
 	a.logger.Debug("repos created")
 }
@@ -217,12 +221,12 @@ func (a *App) initHandlers() {
 func (a *App) populateConfig() {
 	cfg, err := config.ParseConfig()
 	if err != nil {
-		stdLog.Fatal(err)
+		a.logger.Debugf("populateConfig: %s", err)
 	}
 
 	err = cfg.ValidateConfig(a.validator)
 	if err != nil {
-		stdLog.Fatal(err)
+		a.logger.Debugf("populateConfig: %s", err)
 	}
 
 	a.config = cfg
@@ -230,4 +234,12 @@ func (a *App) populateConfig() {
 
 func (a *App) initHTTPClient() {
 	a.clientHTTP = http.DefaultClient
+}
+
+func (a *App) initRabbit() {
+	var err error
+	a.rabbit, err = rabbit.NewRabbitMQ(urlRabbit)
+	if err != nil {
+		a.logger.Fatal(err.Error())
+	}
 }

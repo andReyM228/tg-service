@@ -41,6 +41,23 @@ services:
     networks:
       - backend
 
+  rabbitmq:
+    image: rabbitmq
+    container_name: rabbitmq
+    ports:
+      - "5672:5672"  # порт для AMQP
+      - "15672:15672"  # порт для веб-интерфейса
+    environment:
+      RABBITMQ_DEFAULT_USER: guest  # имя пользователя по умолчанию
+      RABBITMQ_DEFAULT_PASS: guest  # пароль пользователя по умолчанию
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq  # том для хранения данных
+    networks:
+      - backend
+
+volumes:
+  rabbitmq_data:
+
 networks:
   backend:
     driver: bridge

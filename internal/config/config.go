@@ -1,8 +1,8 @@
 package config
 
 import (
+	"fmt"
 	"gopkg.in/yaml.v3"
-	"log"
 	"os"
 )
 
@@ -25,13 +25,13 @@ type (
 func ParseConfig() (Config, error) {
 	file, err := os.ReadFile("./cmd/config.yaml")
 	if err != nil {
-		log.Fatal(err)
+		fmt.Errorf("parseConfig: %s", err)
 	}
 
 	var cfg Config
 
 	if err := yaml.Unmarshal(file, &cfg); err != nil {
-		log.Fatal(err)
+		fmt.Errorf("parseConfig: %s", err)
 	}
 
 	return cfg, nil

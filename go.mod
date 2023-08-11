@@ -15,6 +15,7 @@ require (
 )
 
 require (
+	github.com/andReyM228/lib/rabbit v1.0.7 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect
@@ -31,6 +32,7 @@ require (
 	github.com/savsgio/dictpool v0.0.0-20221023140959-7bf2e61cea94 // indirect
 	github.com/savsgio/gotils v0.0.0-20230203094617-bcbc01813b4f // indirect
 	github.com/sirupsen/logrus v1.9.2 // indirect
+	github.com/streadway/amqp v1.1.0 // indirect
 	github.com/tinylib/msgp v1.1.8 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect
 	github.com/valyala/fasthttp v1.44.0 // indirect

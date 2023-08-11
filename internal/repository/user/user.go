@@ -4,6 +4,9 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/andReyM228/lib/errs"
+	"github.com/andReyM228/lib/rabbit"
+
 	"io"
 	"io/ioutil"
 	"net/http"
@@ -17,12 +20,14 @@ import (
 type Repository struct {
 	log    log.Logger
 	client *http.Client
+	rabbit rabbit.Rabbit
 }
 
-func NewRepository(log log.Logger, client *http.Client) Repository {
+func NewRepository(log log.Logger, client *http.Client, rabbit rabbit.Rabbit) Repository {
 	return Repository{
 		log:    log,
 		client: client,
+		rabbit: rabbit,
 	}
 }
 
@@ -62,24 +67,13 @@ func (r Repository) Update() error {
 
 // сделать норм репоситорские ошибки
 func (r Repository) Create(user domain.User) error {
-	url := fmt.Sprintf("http://user_service:3000/v1/user-service/user")
-
-	data, err := json.Marshal(user)
+	result, err := r.rabbit.Request("loginUser", user)
 	if err != nil {
 		return err
 	}
 
-	buf := bytes.NewBuffer(data)
-	reader := io.Reader(buf)
-
-	resp, err := r.client.Post(url, "application/json", reader)
-	if err != nil {
-		return err
-	}
-
-	switch resp.StatusCode {
-	case 500:
-		return repository.InternalServerError{Cause: ""}
+	if result.StatusCode != 200 {
+		return errs.InternalError{}
 	}
 
 	return nil
