@@ -15,7 +15,8 @@ require (
 )
 
 require (
-	github.com/andReyM228/lib/rabbit v1.0.7 // indirect
+	github.com/andReyM228/lib/bus v1.0.1 // indirect
+	github.com/andReyM228/lib/rabbit v1.0.13 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect

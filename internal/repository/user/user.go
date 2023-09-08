@@ -1,14 +1,13 @@
 package user
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
+	"github.com/andReyM228/lib/bus"
 	"github.com/andReyM228/lib/errs"
 	"github.com/andReyM228/lib/rabbit"
+	"github.com/go-playground/validator/v10"
 
-	"io"
-	"io/ioutil"
 	"net/http"
 
 	"tg_service/internal/domain"
@@ -18,43 +17,36 @@ import (
 )
 
 type Repository struct {
-	log    log.Logger
-	client *http.Client
-	rabbit rabbit.Rabbit
+	log       log.Logger
+	client    *http.Client
+	rabbit    rabbit.Rabbit
+	validator *validator.Validate
 }
 
-func NewRepository(log log.Logger, client *http.Client, rabbit rabbit.Rabbit) Repository {
+func NewRepository(log log.Logger, client *http.Client, rabbit rabbit.Rabbit, validator *validator.Validate) Repository {
 	return Repository{
-		log:    log,
-		client: client,
-		rabbit: rabbit,
+		log:       log,
+		client:    client,
+		rabbit:    rabbit,
+		validator: validator,
 	}
 }
 
 func (r Repository) Get(id int64) (domain.User, error) {
-	url := fmt.Sprintf("http://user_service:3000/v1/user-service/user/%d", id)
-
-	resp, err := r.client.Get(url)
+	result, err := r.rabbit.Request(bus.SubjectUserServiceGetUserByID, bus.GetUserByIDRequest{ID: id})
 	if err != nil {
-		return domain.User{}, repository.InternalServerError{Cause: err.Error()}
+		return domain.User{}, err
 	}
 
-	switch resp.StatusCode {
-	case 404:
-		return domain.User{}, repository.NotFound{What: "user by id"}
-
-	case 500:
-		return domain.User{}, repository.InternalServerError{Cause: ""}
-	}
-
-	data, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return domain.User{}, repository.InternalServerError{Cause: err.Error()}
+	if result.StatusCode != 200 {
+		return domain.User{}, errs.InternalError{Cause: fmt.Sprintf("status code is %d", result.StatusCode)}
 	}
 
 	var user domain.User
-	if err := json.Unmarshal(data, &user); err != nil {
-		return domain.User{}, repository.InternalServerError{Cause: err.Error()}
+
+	err = json.Unmarshal(result.Payload, &user)
+	if err != nil {
+		return domain.User{}, errs.InternalError{Cause: err.Error()}
 	}
 
 	return user, nil
@@ -67,7 +59,7 @@ func (r Repository) Update() error {
 
 // сделать норм репоситорские ошибки
 func (r Repository) Create(user domain.User) error {
-	result, err := r.rabbit.Request("loginUser", user)
+	result, err := r.rabbit.Request(bus.SubjectUserServiceCreateUser, user)
 	if err != nil {
 		return err
 	}
@@ -80,50 +72,29 @@ func (r Repository) Create(user domain.User) error {
 }
 
 func (r Repository) Login(password string, chatID int64) (int64, error) {
-	url := fmt.Sprintf("http://user_service:3000/v1/user-service/user/login")
-	request := loginRequest{
+	request := bus.LoginRequest{
 		ChatID:   chatID,
 		Password: password,
 	}
 
-	data, err := json.Marshal(request)
+	result, err := r.rabbit.Request(bus.SubjectUserServiceLoginUser, request)
 	if err != nil {
 		return 0, err
 	}
 
-	buf := bytes.NewBuffer(data)
-	reader := io.Reader(buf)
-
-	resp, err := r.client.Post(url, "application/json", reader)
-	if err != nil {
-		r.log.Debug(err.Error())
-		return 0, err
-	}
-
-	r.log.Debug(resp.Status)
-
-	if resp.StatusCode > 399 {
-		switch resp.StatusCode {
-		case 400:
-			return 0, repository.BadRequest{Cause: "wrong body"}
-		case 401:
-			return 0, repository.Unauthorized{Cause: "wrong password"}
-		case 404:
-			return 0, repository.NotFound{What: "user"}
-		default:
-			return 0, repository.InternalServerError{Cause: ""}
-		}
-	}
-
-	data, err = ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return 0, repository.InternalServerError{Cause: err.Error()}
+	if result.StatusCode != 200 {
+		return 0, errs.InternalError{}
 	}
 
 	var loginResp loginResponse
 
-	if err := json.Unmarshal(data, &loginResp); err != nil {
+	if err := json.Unmarshal(result.Payload, &loginResp); err != nil {
 		return 0, repository.InternalServerError{Cause: err.Error()}
+	}
+
+	err = r.validator.Struct(loginResp)
+	if err != nil {
+		return 0, repository.BadRequest{Cause: err.Error()}
 	}
 
 	return loginResp.UserID, nil

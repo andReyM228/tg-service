@@ -196,8 +196,8 @@ func (a *App) initValidator() {
 }
 
 func (a *App) initRepos() {
-	a.carsRepo = cars.NewRepository(a.logger, a.clientHTTP)
-	a.usersRepo = user.NewRepository(a.logger, a.clientHTTP, a.rabbit)
+	a.carsRepo = cars.NewRepository(a.logger, a.clientHTTP, a.rabbit)
+	a.usersRepo = user.NewRepository(a.logger, a.clientHTTP, a.rabbit, a.validator)
 
 	a.logger.Debug("repos created")
 }
