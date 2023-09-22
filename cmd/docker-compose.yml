@@ -13,8 +13,8 @@ services:
     networks:
       - backend
 
-  user_service:
-    image: user_service:latest
+  user-service:
+    image: andrey48358424/user-service:latest
     container_name: user_service
     restart: always
     depends_on:
@@ -22,9 +22,8 @@ services:
     networks:
       - backend
 
-
   tg-service:
-    image: tg-service:latest
+    image: andrey48358424/tg-service
     container_name: tg-service
     restart: always
     depends_on:
@@ -33,7 +32,7 @@ services:
       - backend
 
   tx-service:
-    image: tx-service:latest
+    image: andrey48358424/tx-service:latest
     container_name: tx-service
     restart: always
     depends_on:

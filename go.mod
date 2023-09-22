@@ -4,9 +4,11 @@ go 1.19
 
 require (
 	github.com/andReyM228/lib/auth v1.0.1
+	github.com/andReyM228/lib/bus v1.0.1
 	github.com/andReyM228/lib/errs v1.0.5
 	github.com/andReyM228/lib/gpt3 v1.0.7
 	github.com/andReyM228/lib/log v0.0.0-20230530155857-6b74a1ce1330
+	github.com/andReyM228/lib/rabbit v1.0.13
 	github.com/go-playground/validator/v10 v10.14.1
 	github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1
 	github.com/gofiber/fiber/v2 v2.42.0
@@ -15,8 +17,6 @@ require (
 )
 
 require (
-	github.com/andReyM228/lib/bus v1.0.1 // indirect
-	github.com/andReyM228/lib/rabbit v1.0.13 // indirect
 	github.com/andybalholm/brotli v1.0.4 // indirect
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible // indirect
 	github.com/gabriel-vasile/mimetype v1.4.2 // indirect

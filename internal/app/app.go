@@ -24,7 +24,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-const urlRabbit = "amqp://guest:guest@localhost:5672/"
+const urlRabbit = "amqp://guest:guest@rabbitmq:5672/"
 
 type App struct {
 	config                      config.Config
