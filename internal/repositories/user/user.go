@@ -10,10 +10,8 @@ import (
 
 	"net/http"
 
-	"tg_service/internal/domain"
-	"tg_service/internal/repository"
-
 	"github.com/andReyM228/lib/log"
+	"tg_service/internal/domain"
 )
 
 type Repository struct {
@@ -57,7 +55,6 @@ func (r Repository) Update() error {
 	return nil
 }
 
-// сделать норм репоситорские ошибки
 func (r Repository) Create(user domain.User) error {
 	result, err := r.rabbit.Request(bus.SubjectUserServiceCreateUser, user)
 	if err != nil {
@@ -65,7 +62,7 @@ func (r Repository) Create(user domain.User) error {
 	}
 
 	if result.StatusCode != 200 {
-		return errs.InternalError{}
+		return err
 	}
 
 	return nil
@@ -89,18 +86,13 @@ func (r Repository) Login(password string, chatID int64) (int64, error) {
 	var loginResp loginResponse
 
 	if err := json.Unmarshal(result.Payload, &loginResp); err != nil {
-		return 0, repository.InternalServerError{Cause: err.Error()}
+		return 0, errs.InternalError{Cause: err.Error()}
 	}
 
 	err = r.validator.Struct(loginResp)
 	if err != nil {
-		return 0, repository.BadRequest{Cause: err.Error()}
+		return 0, errs.InternalError{Cause: err.Error()}
 	}
 
 	return loginResp.UserID, nil
-}
-
-func (r Repository) Delete(id int64) error {
-
-	return nil
 }

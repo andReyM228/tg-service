@@ -24,7 +24,7 @@ services:
 
   tg-service:
     image: andrey48358424/tg-service
-    container_name: tg-service
+    container_name: tg-services
     restart: always
     depends_on:
       - database
@@ -33,7 +33,7 @@ services:
 
   tx-service:
     image: andrey48358424/tx-service:latest
-    container_name: tx-service
+    container_name: tx-services
     restart: always
     depends_on:
       - database

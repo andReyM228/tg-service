@@ -7,19 +7,18 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"strconv"
 	"strings"
-	"tg_service/internal/handler/car"
-	"tg_service/internal/handler/user"
+	"tg_service/internal/handler"
 )
 
 type Handler struct {
 	tgbot       *tgbotapi.BotAPI
-	userHandler user.Handler
-	carHandler  car.Handler
+	userHandler handler.UserHandler
+	carHandler  handler.CarHandler
 	errChan     chan errs.TgError
 	chatGPT     gpt3.ChatGPT
 }
 
-func NewHandler(tgbot *tgbotapi.BotAPI, userHandler user.Handler, carHandler car.Handler, errChan chan errs.TgError, chatGPT gpt3.ChatGPT) Handler {
+func NewHandler(tgbot *tgbotapi.BotAPI, userHandler handler.UserHandler, carHandler handler.CarHandler, errChan chan errs.TgError, chatGPT gpt3.ChatGPT) Handler {
 	return Handler{
 		tgbot:       tgbot,
 		userHandler: userHandler,
@@ -30,7 +29,7 @@ func NewHandler(tgbot *tgbotapi.BotAPI, userHandler user.Handler, carHandler car
 }
 
 func (h Handler) RegistrationHandler(update tgbotapi.Update) {
-	err := h.userHandler.Create(update.Message.Chat.ID, update)
+	err := h.userHandler.CreateUser(update.Message.Chat.ID, update)
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,
@@ -125,7 +124,7 @@ func (h Handler) GetUserHandler(update tgbotapi.Update) {
 		return
 	}
 
-	userResp, err := h.userHandler.Get(int64(id))
+	userResp, err := h.userHandler.GetUser(int64(id))
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,
@@ -163,7 +162,7 @@ func (h Handler) GetCarHandler(update tgbotapi.Update, loginUsers map[int64]stri
 		return
 	}
 
-	carResp, err := h.carHandler.Get(int64(id), loginUsers[update.Message.Chat.ID])
+	carResp, err := h.carHandler.GetCar(int64(id), loginUsers[update.Message.Chat.ID])
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,

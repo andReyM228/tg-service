@@ -3,18 +3,22 @@ package app
 import (
 	"context"
 	"github.com/andReyM228/lib/rabbit"
+	"github.com/andReyM228/one/chain_client"
 	"net/http"
 	"os"
 	"strings"
+	"tg_service/internal/handler"
+	"tg_service/internal/repositories"
+	"tg_service/internal/services"
 
 	"tg_service/internal/config"
 	"tg_service/internal/domain"
 	car_handler "tg_service/internal/handler/car"
 	user_handler "tg_service/internal/handler/user"
-	"tg_service/internal/repository/cars"
-	"tg_service/internal/repository/user"
-	"tg_service/internal/service/car"
-	user_service "tg_service/internal/service/user"
+	"tg_service/internal/repositories/cars"
+	"tg_service/internal/repositories/user"
+	"tg_service/internal/services/car"
+	user_service "tg_service/internal/services/user"
 	"tg_service/internal/tg_handlers"
 
 	"github.com/andReyM228/lib/errs"
@@ -24,7 +28,7 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-const urlRabbit = "amqp://guest:guest@rabbitmq:5672/"
+const urlRabbit = "amqp://guest:guest@localhost:5672/"
 
 type App struct {
 	config                      config.Config
@@ -32,12 +36,12 @@ type App struct {
 	tgbot                       *tgbotapi.BotAPI
 	logger                      log.Logger
 	validator                   *validator.Validate
-	usersRepo                   user.Repository
-	carsRepo                    cars.Repository
-	userService                 user_service.Service
-	carService                  car.Service
-	userHandler                 user_handler.Handler
-	carHandler                  car_handler.Handler
+	usersRepo                   repositories.UserRepo
+	carsRepo                    repositories.CarRepo
+	userService                 services.UserService
+	carService                  services.CarService
+	userHandler                 handler.UserHandler
+	carHandler                  handler.CarHandler
 	tgHandler                   tg_handlers.Handler
 	clientHTTP                  *http.Client
 	errChan                     chan errs.TgError
@@ -46,6 +50,7 @@ type App struct {
 	processingRegistrationUsers domain.ProcessingRegistrationUsers
 	processingLoginUsers        domain.ProcessingLoginUsers
 	rabbit                      rabbit.Rabbit
+	chain                       chain_client.Client
 }
 
 func New(name string) App {
@@ -62,6 +67,7 @@ func (a *App) Run(ctx context.Context) {
 	a.initValidator()
 	a.initLogger()
 	a.populateConfig()
+	a.initChainClient(ctx)
 	a.initGPT()
 	a.listenErrs(ctx)
 	a.initTgBot()
@@ -104,6 +110,7 @@ func (a *App) initTgBot() {
 
 }
 
+// TODO: переписать на telebot
 func (a *App) listenTgBot() {
 	updateConfig := tgbotapi.NewUpdate(0)
 	updateConfig.Timeout = 1
@@ -196,7 +203,7 @@ func (a *App) initValidator() {
 }
 
 func (a *App) initRepos() {
-	a.carsRepo = cars.NewRepository(a.logger, a.clientHTTP, a.rabbit)
+	a.carsRepo = cars.NewRepository(a.logger, a.clientHTTP, a.rabbit, a.config)
 	a.usersRepo = user.NewRepository(a.logger, a.clientHTTP, a.rabbit, a.validator)
 
 	a.logger.Debug("repos created")
@@ -212,7 +219,7 @@ func (a *App) initServices() {
 func (a *App) initHandlers() {
 	a.loginUsers = map[int64]string{}
 	a.carHandler = car_handler.NewHandler(a.carService, a.tgbot)
-	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.loginUsers, &a.processingRegistrationUsers, &a.processingLoginUsers)
+	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.loginUsers, &a.processingRegistrationUsers, &a.processingLoginUsers, a.chain)
 	a.tgHandler = tg_handlers.NewHandler(a.tgbot, a.userHandler, a.carHandler, a.errChan, a.chatGPT)
 
 	a.logger.Debug("handlers created")
@@ -230,6 +237,10 @@ func (a *App) populateConfig() {
 	}
 
 	a.config = cfg
+}
+
+func (a *App) initChainClient(ctx context.Context) {
+	a.chain = chain_client.NewClient(a.config.Chain)
 }
 
 func (a *App) initHTTPClient() {

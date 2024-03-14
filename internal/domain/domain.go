@@ -11,6 +11,7 @@ const (
 	RegistrationStepEmail    = "email"
 	RegistrationStepPhone    = "phone"
 	RegistrationStepPassword = "password"
+	RegistrationStepAddress  = "address"
 
 	LoginStepStart    = "start"
 	LoginStepPassword = "password"
@@ -30,15 +31,16 @@ type Cars struct {
 }
 
 type User struct {
-	ID        int
-	Name      string
-	Surname   string
-	Phone     string
-	Email     string
-	Password  string
-	ChatID    int64
-	Cars      []Car
-	CreatedAt time.Time
+	ID             int
+	Name           string
+	Surname        string
+	Phone          string
+	Email          string
+	Password       string
+	ChatID         int64
+	AccountAddress string
+	Cars           []Car
+	CreatedAt      time.Time
 }
 
 type CarCharacteristics struct {
@@ -115,6 +117,17 @@ func (r ProcessingRegistrationUsers) SetPassword(chatID int64, password string) 
 		if usr.ChatID == chatID {
 			usr.User.Password = password
 			usr.User.ChatID = chatID
+			r[i].User = usr.User
+
+			return
+		}
+	}
+}
+
+func (r ProcessingRegistrationUsers) SetAddress(chatID int64, address string) {
+	for i, usr := range r {
+		if usr.ChatID == chatID {
+			usr.User.AccountAddress = address
 			r[i].User = usr.User
 
 			return

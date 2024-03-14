@@ -2,14 +2,17 @@ package config
 
 import (
 	"fmt"
+	"github.com/andReyM228/one/chain_client"
 	"gopkg.in/yaml.v3"
 	"os"
 )
 
 type (
 	Config struct {
-		TgBot   TgBot   `yaml:"tg-bot" validate:"required"`
-		ChatGPT ChatGPT `yaml:"chat-gpt" validate:"required"`
+		Chain   chain_client.ClientConfig `yaml:"chain"`
+		TgBot   TgBot                     `yaml:"tg-bot" validate:"required"`
+		ChatGPT ChatGPT                   `yaml:"chat-gpt" validate:"required"`
+		Extra   Extra                     `yaml:"extra" validate:"required"`
 	}
 
 	TgBot struct {
@@ -19,6 +22,13 @@ type (
 	ChatGPT struct {
 		Key   string `yaml:"key" validate:"required"`
 		Model string `yaml:"model" validate:"required"`
+	}
+
+	Extra struct {
+		UrlGetAllCars  string `yaml:"url_get_all_cars" validate:"required"`
+		UrlGetUserCars string `yaml:"url_get_user_cars" validate:"required"`
+		UrlBuyCar      string `yaml:"url_buy_car" validate:"required"`
+		UrlSellCar     string `yaml:"url_sell_car" validate:"required"`
 	}
 )
 

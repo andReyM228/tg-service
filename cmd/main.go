@@ -26,7 +26,7 @@ func gracefulShutDown() context.Context {
 	signal.Notify(c, syscall.SIGHUP, syscall.SIGTERM, os.Interrupt)
 	go func() {
 		<-c
-		log.Print("service stopped by gracefulShutDown")
+		log.Print("services stopped by gracefulShutDown")
 		cancel()
 
 	}()

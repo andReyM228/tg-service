@@ -27,7 +27,7 @@ func TestRepository_Get(t *testing.T) {
 		wantErr bool
 	}{
 		{
-			name: "",
+			name: "success",
 			fields: fields{
 				log:    log.Init(),
 				client: nil,

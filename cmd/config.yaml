@@ -4,3 +4,15 @@ tg-bot:
 chat-gpt:
   key: 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
   model: gpt-3.5-turbo
+
+chain:
+  chain_id: "one"
+  base_url: "localhost:9090"
+  keyring_type: "memory"
+  gas_limit: 200000
+
+extra:
+  url_get_all_cars: http://localhost:3000/v1/user-service/cars/%s
+  url_get_user_cars: http://localhost:3000/v1/user-service/user-cars
+  url_buy_car: http://localhost:3000/v1/user-service/buy-car/:chat_id/:car_id
+  url_sell_car: http://localhost:3000/v1/user-service/sell-car/:chat_id/:car_id

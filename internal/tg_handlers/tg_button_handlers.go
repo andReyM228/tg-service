@@ -20,7 +20,7 @@ func (h Handler) AllCarDataButton(update tgbotapi.Update, loginUsers map[int64]s
 		return
 	}
 
-	cars, err := h.carHandler.GetAll(loginUsers[update.CallbackQuery.Message.Chat.ID], data[1])
+	cars, err := h.carHandler.GetAllCars(loginUsers[update.CallbackQuery.Message.Chat.ID], data[1])
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,

@@ -2,34 +2,35 @@ package user
 
 import (
 	"fmt"
-	"tg_service/internal/domain"
-	"tg_service/internal/service/user"
-
 	"github.com/andReyM228/lib/auth"
 	"github.com/andReyM228/lib/errs"
+	"github.com/andReyM228/one/chain_client"
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
-	"github.com/gofiber/fiber/v2"
+	"tg_service/internal/domain"
+	"tg_service/internal/services"
 )
 
 type Handler struct {
-	userService                 user.Service
+	userService                 services.UserService
 	tgbot                       *tgbotapi.BotAPI
 	loginMap                    map[int64]string
 	processingRegistrationUsers *domain.ProcessingRegistrationUsers
 	processingLoginUsers        *domain.ProcessingLoginUsers
+	chain                       chain_client.Client
 }
 
-func NewHandler(service user.Service, tgbot *tgbotapi.BotAPI, loginMap map[int64]string, processingRegistrationUsers *domain.ProcessingRegistrationUsers, processingLoginUsers *domain.ProcessingLoginUsers) Handler {
+func NewHandler(userService services.UserService, tgbot *tgbotapi.BotAPI, loginMap map[int64]string, processingRegistrationUsers *domain.ProcessingRegistrationUsers, processingLoginUsers *domain.ProcessingLoginUsers, chain chain_client.Client) Handler {
 	return Handler{
-		userService:                 service,
+		userService:                 userService,
 		tgbot:                       tgbot,
 		loginMap:                    loginMap,
 		processingRegistrationUsers: processingRegistrationUsers,
 		processingLoginUsers:        processingLoginUsers,
+		chain:                       chain,
 	}
 }
 
-func (h Handler) Get(id int64) (string, error) {
+func (h Handler) GetUser(id int64) (string, error) {
 	user, err := h.userService.GetUser(id)
 	if err != nil {
 		return "", err
@@ -38,12 +39,7 @@ func (h Handler) Get(id int64) (string, error) {
 	return fmt.Sprintf("имя: %s, фамилия: %s, телефон: %s, почта: %s, количество машин: %d,", user.Name, user.Surname, user.Phone, user.Email, len(user.Cars)), nil
 }
 
-func (h Handler) Update(ctx *fiber.Ctx) error {
-
-	return nil
-}
-
-func (h Handler) Create(chatID int64, update tgbotapi.Update) error {
+func (h Handler) CreateUser(chatID int64, update tgbotapi.Update) error {
 	processUser := h.processingRegistrationUsers.GetOrCreate(chatID)
 
 	switch processUser.Step {
@@ -67,6 +63,7 @@ func (h Handler) Create(chatID int64, update tgbotapi.Update) error {
 
 			return nil
 		}
+
 		h.processingRegistrationUsers.SetName(chatID, update.Message.Text)
 
 		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "введите фамилию")); err != nil {
@@ -76,6 +73,7 @@ func (h Handler) Create(chatID int64, update tgbotapi.Update) error {
 		}
 
 		h.processingRegistrationUsers.UpdateRegistrationStep(chatID, domain.RegistrationStepSurname)
+
 	case domain.RegistrationStepSurname:
 		if update.Message.Text == "/exit" {
 			if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация прервана")); err != nil {
@@ -160,21 +158,39 @@ func (h Handler) Create(chatID int64, update tgbotapi.Update) error {
 
 		h.processingRegistrationUsers.SetPassword(chatID, update.Message.Text)
 
+		record, mnemonic, err := h.chain.GenerateAccount(fmt.Sprintf("%d", chatID))
+		if err != nil {
+			return err
+		}
+
+		address, err := record.GetAddress()
+		if err != nil {
+			return err
+		}
+
+		h.processingRegistrationUsers.SetAddress(chatID, address.String())
+
 		if err := h.userService.CreateUser(h.processingRegistrationUsers.GetOrCreate(chatID).User); err != nil {
 			h.processingRegistrationUsers.Delete(chatID)
 
 			return err
 		}
 
-		h.processingRegistrationUsers.Delete(chatID)
-		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация успешна")); err != nil {
+		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, "регистрация успешна, ваша мнемоника:")); err != nil {
 			return err
 		}
 
+		if _, err := h.tgbot.Send(tgbotapi.NewMessage(chatID, mnemonic)); err != nil {
+			return err
+		}
+
+		h.processingRegistrationUsers.Delete(chatID)
 	}
 
 	return nil
 }
+
+// TODO: переместить создание токена в user-services
 
 func (h Handler) Login(chatID int64, update tgbotapi.Update) error {
 	processUser := h.processingLoginUsers.GetOrCreate(chatID)
@@ -227,15 +243,3 @@ func (h Handler) Login(chatID int64, update tgbotapi.Update) error {
 
 	return nil
 }
-
-func (h Handler) Delete(ctx *fiber.Ctx) error {
-
-	return nil
-}
-
-/*
-1. при логине генерировать токен
-2. токен должен содержать: уникальная инфа про юзера и время истечения
-3. написать функцию которая будет докодировать токен
-4. добавить авторизацию во все остальные сервисы
-*/
