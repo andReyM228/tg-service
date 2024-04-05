@@ -1,6 +1,7 @@
 package user
 
 import (
+	"github.com/andReyM228/lib/errs"
 	"github.com/andReyM228/lib/log"
 	"tg_service/internal/domain"
 	"tg_service/internal/repositories"
@@ -53,17 +54,16 @@ func (s Service) CreateUser(user domain.User) error {
 func (s Service) Login(password string, chatID int64) (int64, error) {
 	userID, err := s.userRepo.Login(password, chatID)
 	if err != nil {
-		//switch err.(type) {
-		//case repositories.BadRequest:
-		//	return 0, errs.BadRequestError{Cause: "wrong body"}
-		//case repositories.Unauthorized:
-		//	return 0, errs.UnauthorizedError{Cause: "wrong password"}
-		//case repositories.NotFound:
-		//	return 0, errs.NotFoundError{What: "user"}
-		//default:
-		//	return 0, errs.InternalError{Cause: ""}
-		//}
-		return 0, err
+		switch err.(type) {
+		case repositories.BadRequest:
+			return 0, errs.BadRequestError{Cause: "wrong body"}
+		case repositories.Unauthorized:
+			return 0, errs.UnauthorizedError{Cause: "wrong password"}
+		case repositories.NotFound:
+			return 0, errs.NotFoundError{What: "user"}
+		default:
+			return 0, errs.InternalError{Cause: ""}
+		}
 	}
 
 	return userID, nil
