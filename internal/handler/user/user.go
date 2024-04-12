@@ -13,17 +13,17 @@ import (
 type Handler struct {
 	userService                 services.UserService
 	tgbot                       *tgbotapi.BotAPI
-	loginMap                    map[int64]string
+	cache                       services.CacheService
 	processingRegistrationUsers *domain.ProcessingRegistrationUsers
 	processingLoginUsers        *domain.ProcessingLoginUsers
 	chain                       chain_client.Client
 }
 
-func NewHandler(userService services.UserService, tgbot *tgbotapi.BotAPI, loginMap map[int64]string, processingRegistrationUsers *domain.ProcessingRegistrationUsers, processingLoginUsers *domain.ProcessingLoginUsers, chain chain_client.Client) Handler {
+func NewHandler(userService services.UserService, tgbot *tgbotapi.BotAPI, cache services.CacheService, processingRegistrationUsers *domain.ProcessingRegistrationUsers, processingLoginUsers *domain.ProcessingLoginUsers, chain chain_client.Client) Handler {
 	return Handler{
 		userService:                 userService,
 		tgbot:                       tgbot,
-		loginMap:                    loginMap,
+		cache:                       cache,
 		processingRegistrationUsers: processingRegistrationUsers,
 		processingLoginUsers:        processingLoginUsers,
 		chain:                       chain,
@@ -231,7 +231,10 @@ func (h Handler) Login(chatID int64, update tgbotapi.Update) error {
 			return errs.InternalError{}
 		}
 
-		h.loginMap[chatID] = token
+		err = h.cache.AddToken(chatID, token)
+		if err != nil {
+			return err
+		}
 
 		h.processingLoginUsers.Delete(chatID)
 

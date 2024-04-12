@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"github.com/andReyM228/lib/redis"
 	"github.com/andReyM228/one/chain_client"
 	"gopkg.in/yaml.v3"
 	"os"
@@ -13,6 +14,7 @@ type (
 		TgBot   TgBot                     `yaml:"tg-bot" validate:"required"`
 		ChatGPT ChatGPT                   `yaml:"chat-gpt" validate:"required"`
 		Extra   Extra                     `yaml:"extra" validate:"required"`
+		Redis   redis.Config              `yaml:"cache"`
 	}
 
 	TgBot struct {

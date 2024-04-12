@@ -11,6 +11,11 @@ chain:
   keyring_type: "memory"
   gas_limit: 200000
 
+redis:
+  addr: "localhost:6379"
+  password: ""
+  db: 0
+
 extra:
   url_get_all_cars: http://localhost:3000/v1/user-service/cars/%s
   url_get_user_cars: http://localhost:3000/v1/user-service/user-cars

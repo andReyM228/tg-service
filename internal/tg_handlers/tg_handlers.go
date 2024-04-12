@@ -8,21 +8,24 @@ import (
 	"strconv"
 	"strings"
 	"tg_service/internal/handler"
+	"tg_service/internal/services"
 )
 
 type Handler struct {
 	tgbot       *tgbotapi.BotAPI
 	userHandler handler.UserHandler
 	carHandler  handler.CarHandler
+	cache       services.CacheService
 	errChan     chan errs.TgError
 	chatGPT     gpt3.ChatGPT
 }
 
-func NewHandler(tgbot *tgbotapi.BotAPI, userHandler handler.UserHandler, carHandler handler.CarHandler, errChan chan errs.TgError, chatGPT gpt3.ChatGPT) Handler {
+func NewHandler(tgbot *tgbotapi.BotAPI, userHandler handler.UserHandler, carHandler handler.CarHandler, cache services.CacheService, errChan chan errs.TgError, chatGPT gpt3.ChatGPT) Handler {
 	return Handler{
 		tgbot:       tgbot,
 		userHandler: userHandler,
 		carHandler:  carHandler,
+		cache:       cache,
 		errChan:     errChan,
 		chatGPT:     chatGPT,
 	}
@@ -69,9 +72,17 @@ func (h Handler) AllCarsHandler(update tgbotapi.Update) {
 	}
 }
 
-func (h Handler) GetMyCarsHandler(update tgbotapi.Update, loginUsers map[int64]string) {
+func (h Handler) GetMyCarsHandler(update tgbotapi.Update) {
+	token, err := h.cache.GetToken(update.Message.Chat.ID)
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.Message.Chat.ID,
+		}
+		return
+	}
 
-	cars, err := h.carHandler.GetUserCars(loginUsers[update.Message.Chat.ID])
+	cars, err := h.carHandler.GetUserCars(token)
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,
@@ -142,7 +153,7 @@ func (h Handler) GetUserHandler(update tgbotapi.Update) {
 	}
 }
 
-func (h Handler) GetCarHandler(update tgbotapi.Update, loginUsers map[int64]string) {
+func (h Handler) GetCarHandler(update tgbotapi.Update) {
 	msg := strings.Split(update.Message.Text, ":")
 
 	if len(msg) < 2 {
@@ -162,7 +173,16 @@ func (h Handler) GetCarHandler(update tgbotapi.Update, loginUsers map[int64]stri
 		return
 	}
 
-	carResp, err := h.carHandler.GetCar(int64(id), loginUsers[update.Message.Chat.ID])
+	token, err := h.cache.GetToken(update.Message.Chat.ID)
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.Message.Chat.ID,
+		}
+		return
+	}
+
+	carResp, err := h.carHandler.GetCar(int64(id), token)
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,

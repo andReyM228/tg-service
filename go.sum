@@ -81,6 +81,14 @@ github.com/andReyM228/lib/log v0.0.0-20230530155857-6b74a1ce1330 h1:UfVUPlFFmsn/
 github.com/andReyM228/lib/log v0.0.0-20230530155857-6b74a1ce1330/go.mod h1:B57HbHEgpkwENwn2Hhl7lyMu8MIbFmw7O1tR2ZSo0vA=
 github.com/andReyM228/lib/rabbit v1.0.13 h1:WcyGJF8ZYBwIE8bHGVAkN6QqCsCIS5Kod1TTziHvynM=
 github.com/andReyM228/lib/rabbit v1.0.13/go.mod h1:OqttT7Tgm9tMsIf22Xv8RG2UZ9RQ4Pl2AJ3c5wj5SuQ=
+github.com/andReyM228/lib/redis v1.0.0 h1:YYZwRevuDqnkkR2Y10S2yrY+fDZiCkM0AUuKtEArtg0=
+github.com/andReyM228/lib/redis v1.0.0/go.mod h1:nIVAoZ+qFQGLWH6dO4Y6W1vGmoy34BBq7bSAY9Rr4rM=
+github.com/andReyM228/lib/redis v1.0.1 h1:o6aI0LQTPjdUBu1E0I13L9C3PrXkn2LamQZ0opO2vjQ=
+github.com/andReyM228/lib/redis v1.0.1/go.mod h1:nIVAoZ+qFQGLWH6dO4Y6W1vGmoy34BBq7bSAY9Rr4rM=
+github.com/andReyM228/lib/redis v1.0.2 h1:ULLqmCG4Y0dh2HMIdHkg1cenvTwCR7sXV3INcnY/AH4=
+github.com/andReyM228/lib/redis v1.0.2/go.mod h1:nIVAoZ+qFQGLWH6dO4Y6W1vGmoy34BBq7bSAY9Rr4rM=
+github.com/andReyM228/lib/redis v1.0.3 h1:oqxl2lPnbe5pHLMPACMkfyNLIVknb50w9t081mJ0S1o=
+github.com/andReyM228/lib/redis v1.0.3/go.mod h1:nIVAoZ+qFQGLWH6dO4Y6W1vGmoy34BBq7bSAY9Rr4rM=
 github.com/andReyM228/one v1.0.0 h1:iHYb4fXGJVMVVFixSagR8RmXvznoYJD6VAYE3tsn/pY=
 github.com/andReyM228/one v1.0.0/go.mod h1:ySOoxh4a0E/17XJvWXwKQILCr6Zad3yYjcGR2UOtegc=
 github.com/andReyM228/one/chain_client v1.0.4 h1:Ef1pU5IB8KOvCN+s431qkSuj5IWz9q9KCqdtw1nI9pc=
@@ -236,6 +244,8 @@ github.com/go-playground/universal-translator v0.18.1 h1:Bcnm0ZwsGyWbCzImXv+pAJn
 github.com/go-playground/universal-translator v0.18.1/go.mod h1:xekY+UJKNuX9WP91TpwSH2VMlDf28Uj24BCp08ZFTUY=
 github.com/go-playground/validator/v10 v10.14.1 h1:9c50NUPC30zyuKprjL3vNZ0m5oG+jU0zvx4AqHGnv4k=
 github.com/go-playground/validator/v10 v10.14.1/go.mod h1:9iXMNT7sEkjXb0I+enO7QXmzG6QCsPWY4zveKFVRSyU=
+github.com/go-redis/redis v6.15.9+incompatible h1:K0pv1D7EQUjfyoMql+r/jZqCLizCGKFlFgcHWWmHQjg=
+github.com/go-redis/redis v6.15.9+incompatible/go.mod h1:NAIEuMOZ/fxfXJIrKDQDz8wamY7mA7PouImQ2Jvg6kA=
 github.com/go-stack/stack v1.8.0/go.mod h1:v0f6uXyyMGvRgIKkXu+yp6POWl0qKG85gN/melR3HDY=
 github.com/go-task/slim-sprig v0.0.0-20210107165309-348f09dbbbc0/go.mod h1:fyg7847qk6SyHyPtNmDHnmrv/HOrqktSC+C9fM+CJOE=
 github.com/go-telegram-bot-api/telegram-bot-api/v5 v5.5.1 h1:wG8n/XJQ07TmjbITcGiUaOtXxdrINDz1b0J1w0SzqDc=

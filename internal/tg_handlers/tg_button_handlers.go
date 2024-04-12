@@ -10,7 +10,7 @@ import (
 	"tg_service/internal/domain"
 )
 
-func (h Handler) AllCarDataButton(update tgbotapi.Update, loginUsers map[int64]string) {
+func (h Handler) AllCarDataButton(update tgbotapi.Update) {
 	data := strings.Split(update.CallbackQuery.Data, ":")
 	if len(data) < 2 {
 		h.errChan <- errs.TgError{
@@ -20,7 +20,16 @@ func (h Handler) AllCarDataButton(update tgbotapi.Update, loginUsers map[int64]s
 		return
 	}
 
-	cars, err := h.carHandler.GetAllCars(loginUsers[update.CallbackQuery.Message.Chat.ID], data[1])
+	token, err := h.cache.GetToken(update.CallbackQuery.Message.Chat.ID)
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.CallbackQuery.Message.Chat.ID,
+		}
+		return
+	}
+
+	cars, err := h.carHandler.GetAllCars(token, data[1])
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,

@@ -92,8 +92,6 @@ func (r Repository) GetAll(token, label string) (domain.Cars, error) {
 		return domain.Cars{}, errs.InternalError{Cause: err.Error()}
 	}
 
-	r.log.Infof("%v", cars)
-
 	return cars, nil
 }
 
@@ -135,13 +133,20 @@ func (r Repository) GetUserCars(token string) (domain.Cars, error) {
 		return domain.Cars{}, errs.InternalError{Cause: err.Error()}
 	}
 
-	r.log.Infof("%v", cars)
-
 	return cars, nil
 }
 
-func (r Repository) BuyCar(chatID, carID int64) error {
+// TODO: add header "Auth token"
+
+func (r Repository) BuyCar(chatID, carID int64, token string) error {
 	url := fmt.Sprintf(r.cfg.Extra.UrlBuyCar, chatID, carID)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return errs.InternalError{Cause: err.Error()}
+	}
+
+	req.Header.Add("Authorization", token)
 
 	url = strings.Replace(url, ":chat_id", strconv.FormatInt(chatID, 10), 1)
 	url = strings.Replace(url, ":car_id", strconv.FormatInt(carID, 10), 1)
@@ -159,8 +164,15 @@ func (r Repository) BuyCar(chatID, carID int64) error {
 	return nil
 }
 
-func (r Repository) SellCar(chatID, carID int64) error {
+func (r Repository) SellCar(chatID, carID int64, token string) error {
 	url := fmt.Sprintf(r.cfg.Extra.UrlSellCar, chatID, carID)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return errs.InternalError{Cause: err.Error()}
+	}
+
+	req.Header.Add("Authorization", token)
 
 	url = strings.Replace(url, ":chat_id", strconv.FormatInt(chatID, 10), 1)
 	url = strings.Replace(url, ":car_id", strconv.FormatInt(carID, 10), 1)
