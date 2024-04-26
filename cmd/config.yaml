@@ -17,7 +17,8 @@ redis:
   db: 0
 
 extra:
+  car_payment_address: cosmos1ttag5890ak34mpw5ptm24g62qex20e5z3gngvz
   url_get_all_cars: http://localhost:3000/v1/user-service/cars/%s
   url_get_user_cars: http://localhost:3000/v1/user-service/user-cars
-  url_buy_car: http://localhost:3000/v1/user-service/buy-car/:chat_id/:car_id
+  url_buy_car: http://localhost:3000/v1/user-service/buy-car/:tx_hash/:car_id
   url_sell_car: http://localhost:3000/v1/user-service/sell-car/:chat_id/:car_id

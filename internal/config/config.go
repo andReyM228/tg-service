@@ -27,10 +27,11 @@ type (
 	}
 
 	Extra struct {
-		UrlGetAllCars  string `yaml:"url_get_all_cars" validate:"required"`
-		UrlGetUserCars string `yaml:"url_get_user_cars" validate:"required"`
-		UrlBuyCar      string `yaml:"url_buy_car" validate:"required"`
-		UrlSellCar     string `yaml:"url_sell_car" validate:"required"`
+		CarPaymentAddress string `yaml:"car_payment_address" validate:"required"`
+		UrlGetAllCars     string `yaml:"url_get_all_cars" validate:"required"`
+		UrlGetUserCars    string `yaml:"url_get_user_cars" validate:"required"`
+		UrlBuyCar         string `yaml:"url_buy_car" validate:"required"`
+		UrlSellCar        string `yaml:"url_sell_car" validate:"required"`
 	}
 )
 

@@ -1,0 +1,55 @@
+@startuml
+'https://plantuml.com/sequence-diagram
+
+actor User
+
+participant TgService
+participant UserService
+participant Wallet
+database Chain
+autonumber
+
+User -> TgService: "i want to buy a car"
+activate TgService
+
+TgService -> UserService: get car info
+activate UserService
+
+UserService -> TgService: return car info
+deactivate UserService
+
+TgService -> User: show price and \nwallet for payment
+User -> Wallet: send tx
+activate Wallet
+
+Wallet -> Chain: make tx
+activate Chain
+
+Wallet -> User: return tx hash
+deactivate Wallet
+
+User -> TgService: send buy request with \ntx hash
+TgService -> UserService: Send information \nabout car and tx hash
+activate UserService
+
+note right
+    v1/user-service/buy-car/:chat_id/:car_id/:tx_hash
+end note
+
+UserService -> Chain: get tx by hash
+deactivate Chain
+
+UserService -> UserService: validation of payment
+alt successful validation
+    UserService -> UserService: save information about user and car
+    UserService -> TgService: send successful response
+    TgService -> User: send successful message
+
+else some kind of failure
+    UserService -> TgService: return error
+    deactivate UserService
+    TgService -> User: return error message
+    deactivate TgService
+
+end
+@enduml

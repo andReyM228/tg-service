@@ -146,6 +146,15 @@ func (h Handler) BuyDataButton(update tgbotapi.Update) {
 		return
 	}
 
+	token, err := h.cache.GetToken(update.CallbackQuery.Message.Chat.ID)
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.CallbackQuery.Message.Chat.ID,
+		}
+		return
+	}
+
 	carID, err := strconv.Atoi(data[1])
 	if err != nil {
 		h.errChan <- errs.TgError{
@@ -155,7 +164,7 @@ func (h Handler) BuyDataButton(update tgbotapi.Update) {
 		return
 	}
 
-	err = h.carHandler.BuyCar(update.CallbackQuery.Message.Chat.ID, int64(carID))
+	car, err := h.carHandler.GetCar(int64(carID), token)
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,
@@ -164,13 +173,16 @@ func (h Handler) BuyDataButton(update tgbotapi.Update) {
 		return
 	}
 
-	if _, err := h.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, "congratulations!, you bought a car")); err != nil {
+	msg := fmt.Sprintf("you have to pay %d to address %s \n and you should send tx-hash", car.Price, h.config.CarPaymentAddress)
+	if _, err := h.tgbot.Send(tgbotapi.NewMessage(update.CallbackQuery.Message.Chat.ID, msg)); err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,
 			ChatID: update.CallbackQuery.Message.Chat.ID,
 		}
 		return
 	}
+
+	h.processingBuyUsers.Create(update.CallbackQuery.Message.Chat.ID, int64(carID))
 }
 
 func (h Handler) SellDataButton(update tgbotapi.Update) {
@@ -183,6 +195,15 @@ func (h Handler) SellDataButton(update tgbotapi.Update) {
 		return
 	}
 
+	token, err := h.cache.GetToken(update.CallbackQuery.Message.Chat.ID)
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.CallbackQuery.Message.Chat.ID,
+		}
+		return
+	}
+
 	carID, err := strconv.Atoi(data[1])
 	if err != nil {
 		h.errChan <- errs.TgError{
@@ -192,7 +213,7 @@ func (h Handler) SellDataButton(update tgbotapi.Update) {
 		return
 	}
 
-	err = h.carHandler.SellCar(update.CallbackQuery.Message.Chat.ID, int64(carID))
+	err = h.carHandler.SellCar(update.CallbackQuery.Message.Chat.ID, int64(carID), token)
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,

@@ -45,8 +45,8 @@ func (h Handler) GetUserCars(token string) (domain.Cars, error) {
 	return cars, nil
 }
 
-func (h Handler) BuyCar(chatID, carID int64, token string) error {
-	err := h.carService.BuyCar(chatID, carID, token)
+func (h Handler) BuyCar(token, txHash string, carID int64) error {
+	err := h.carService.BuyCar(token, txHash, carID)
 	if err != nil {
 		return err
 	}

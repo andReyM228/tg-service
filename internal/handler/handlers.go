@@ -16,8 +16,8 @@ type (
 		GetCar(id int64, token string) (domain.Car, error)
 		GetAllCars(token, label string) (domain.Cars, error)
 		GetUserCars(token string) (domain.Cars, error)
-		BuyCar(chatID, carID int64) error
-		SellCar(chatID, carID int64) error
+		BuyCar(token, txHash string, carID int64) error
+		SellCar(chatID, carID int64, token string) error
 		PrepareCars(car domain.Car, myCar bool) (tgbotapi.FileBytes, tgbotapi.InlineKeyboardMarkup, error)
 	}
 )

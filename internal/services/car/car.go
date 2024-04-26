@@ -79,8 +79,8 @@ func (s Service) GetUserCars(token string) (domain.Cars, error) {
 	return cars, nil
 }
 
-func (s Service) BuyCar(chatID, carID int64, token string) error {
-	err := s.carRepo.BuyCar(chatID, carID, token)
+func (s Service) BuyCar(token, txHash string, carID int64) error {
+	err := s.carRepo.BuyCar(token, txHash, carID)
 	if err != nil {
 		//switch err.(type) {
 		//case repositories.BadRequest:

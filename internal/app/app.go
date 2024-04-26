@@ -54,6 +54,7 @@ type App struct {
 	chatGPT                     gpt3.ChatGPT
 	processingRegistrationUsers domain.ProcessingRegistrationUsers
 	processingLoginUsers        domain.ProcessingLoginUsers
+	processingBuyUsers          domain.ProcessingBuyUsers
 	rabbit                      rabbit.Rabbit
 	chain                       chain_client.Client
 }
@@ -140,6 +141,12 @@ func (a *App) listenTgBot() {
 
 			if a.processingLoginUsers.IfExists(update.Message.Chat.ID) {
 				go a.tgHandler.LoginHandler(update)
+
+				continue
+			}
+
+			if a.processingBuyUsers.IfExists(update.Message.Chat.ID) {
+				go a.tgHandler.BuyHandler(update)
 
 				continue
 			}
@@ -231,9 +238,11 @@ func (a *App) initServices() {
 }
 
 func (a *App) initHandlers() {
+	a.processingBuyUsers = map[int64]int64{}
+
 	a.carHandler = car_handler.NewHandler(a.carService, a.tgbot)
 	a.userHandler = user_handler.NewHandler(a.userService, a.tgbot, a.cacheService, &a.processingRegistrationUsers, &a.processingLoginUsers, a.chain)
-	a.tgHandler = tg_handlers.NewHandler(a.tgbot, a.userHandler, a.carHandler, a.cacheService, a.errChan, a.chatGPT)
+	a.tgHandler = tg_handlers.NewHandler(a.tgbot, a.userHandler, a.carHandler, a.cacheService, a.errChan, a.chatGPT, a.config.Extra, a.processingBuyUsers)
 
 	a.logger.Debug("handlers created")
 }

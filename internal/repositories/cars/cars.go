@@ -136,29 +136,29 @@ func (r Repository) GetUserCars(token string) (domain.Cars, error) {
 	return cars, nil
 }
 
-// TODO: add header "Auth token"
+// TODO: сделать/убрать ошибки
 
-func (r Repository) BuyCar(chatID, carID int64, token string) error {
-	url := fmt.Sprintf(r.cfg.Extra.UrlBuyCar, chatID, carID)
+func (r Repository) BuyCar(token, txHash string, carID int64) error {
+	url := r.cfg.Extra.UrlBuyCar
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	url = strings.Replace(url, ":tx_hash", txHash, 1)
+	url = strings.Replace(url, ":car_id", strconv.FormatInt(carID, 10), 1)
+
+	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
 		return errs.InternalError{Cause: err.Error()}
 	}
 
 	req.Header.Add("Authorization", token)
 
-	url = strings.Replace(url, ":chat_id", strconv.FormatInt(chatID, 10), 1)
-	url = strings.Replace(url, ":car_id", strconv.FormatInt(carID, 10), 1)
-
-	resp, err := r.client.Post(url, "application/json", nil)
+	resp, err := r.client.Do(req)
 	if err != nil {
 		return err
 	}
 
 	switch resp.StatusCode {
 	case 500:
-		return errs.InternalError{Cause: err.Error()}
+		return errs.InternalError{}
 	}
 
 	return nil
@@ -167,17 +167,17 @@ func (r Repository) BuyCar(chatID, carID int64, token string) error {
 func (r Repository) SellCar(chatID, carID int64, token string) error {
 	url := fmt.Sprintf(r.cfg.Extra.UrlSellCar, chatID, carID)
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	url = strings.Replace(url, ":chat_id", strconv.FormatInt(chatID, 10), 1)
+	url = strings.Replace(url, ":car_id", strconv.FormatInt(carID, 10), 1)
+
+	req, err := http.NewRequest(http.MethodPost, url, nil)
 	if err != nil {
 		return errs.InternalError{Cause: err.Error()}
 	}
 
 	req.Header.Add("Authorization", token)
 
-	url = strings.Replace(url, ":chat_id", strconv.FormatInt(chatID, 10), 1)
-	url = strings.Replace(url, ":car_id", strconv.FormatInt(carID, 10), 1)
-
-	resp, err := r.client.Post(url, "application/json", nil)
+	resp, err := r.client.Do(req)
 	if err != nil {
 		return err
 	}

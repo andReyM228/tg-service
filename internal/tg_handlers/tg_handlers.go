@@ -7,27 +7,40 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 	"strconv"
 	"strings"
+	"tg_service/internal/config"
+	"tg_service/internal/domain"
 	"tg_service/internal/handler"
 	"tg_service/internal/services"
 )
 
 type Handler struct {
-	tgbot       *tgbotapi.BotAPI
-	userHandler handler.UserHandler
-	carHandler  handler.CarHandler
-	cache       services.CacheService
-	errChan     chan errs.TgError
-	chatGPT     gpt3.ChatGPT
+	tgbot              *tgbotapi.BotAPI
+	userHandler        handler.UserHandler
+	carHandler         handler.CarHandler
+	cache              services.CacheService
+	errChan            chan errs.TgError
+	chatGPT            gpt3.ChatGPT
+	config             config.Extra
+	processingBuyUsers domain.ProcessingBuyUsers
 }
 
-func NewHandler(tgbot *tgbotapi.BotAPI, userHandler handler.UserHandler, carHandler handler.CarHandler, cache services.CacheService, errChan chan errs.TgError, chatGPT gpt3.ChatGPT) Handler {
+func NewHandler(tgbot *tgbotapi.BotAPI,
+	userHandler handler.UserHandler,
+	carHandler handler.CarHandler,
+	cache services.CacheService,
+	errChan chan errs.TgError,
+	chatGPT gpt3.ChatGPT,
+	config config.Extra,
+	processingBuyUsers domain.ProcessingBuyUsers) Handler {
 	return Handler{
-		tgbot:       tgbot,
-		userHandler: userHandler,
-		carHandler:  carHandler,
-		cache:       cache,
-		errChan:     errChan,
-		chatGPT:     chatGPT,
+		tgbot:              tgbot,
+		userHandler:        userHandler,
+		carHandler:         carHandler,
+		cache:              cache,
+		errChan:            errChan,
+		chatGPT:            chatGPT,
+		config:             config,
+		processingBuyUsers: processingBuyUsers,
 	}
 }
 
@@ -233,6 +246,36 @@ func (h Handler) StartHandler(update tgbotapi.Update) {
 
 func (h Handler) LoginHandler(update tgbotapi.Update) {
 	err := h.userHandler.Login(update.Message.Chat.ID, update)
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.Message.Chat.ID,
+		}
+
+		return
+	}
+}
+
+func (h Handler) BuyHandler(update tgbotapi.Update) {
+	token, err := h.cache.GetToken(update.Message.Chat.ID)
+	if err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.Message.Chat.ID,
+		}
+		return
+	}
+
+	carID, ok := h.processingBuyUsers.GetCarID(update.Message.Chat.ID)
+	if !ok {
+		h.errChan <- errs.TgError{
+			Err:    fmt.Errorf("not found CarID by ChatID %d", update.Message.Chat.ID),
+			ChatID: update.Message.Chat.ID,
+		}
+		return
+	}
+
+	err = h.carHandler.BuyCar(token, update.Message.Text, carID)
 	if err != nil {
 		h.errChan <- errs.TgError{
 			Err:    err,

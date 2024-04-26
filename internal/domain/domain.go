@@ -240,3 +240,31 @@ func (r *ProcessingLoginUsers) Delete(chatID int64) {
 		}
 	}
 }
+
+type ProcessingBuyUsers map[int64]int64
+
+func (p ProcessingBuyUsers) Create(chatID, carID int64) {
+	p[chatID] = carID
+}
+
+func (p ProcessingBuyUsers) Delete(chatID int64) {
+	delete(p, chatID)
+}
+
+func (p ProcessingBuyUsers) IfExists(chatID int64) bool {
+	_, ok := p[chatID]
+	if ok {
+		return true
+	}
+
+	return false
+}
+
+func (p ProcessingBuyUsers) GetCarID(chatID int64) (int64, bool) {
+	carID, ok := p[chatID]
+	if ok {
+		return carID, true
+	}
+
+	return 0, false
+}
