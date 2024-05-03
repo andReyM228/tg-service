@@ -284,4 +284,14 @@ func (h Handler) BuyHandler(update tgbotapi.Update) {
 
 		return
 	}
+
+	h.processingBuyUsers.Delete(update.Message.Chat.ID)
+
+	if _, err := h.tgbot.Send(tgbotapi.NewMessage(update.Message.Chat.ID, "congratulations!, you bought a car")); err != nil {
+		h.errChan <- errs.TgError{
+			Err:    err,
+			ChatID: update.Message.Chat.ID,
+		}
+		return
+	}
 }
